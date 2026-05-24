@@ -1,0 +1,6 @@
+{
+  "name": "NetPulse",
+  "description": "A professional-grade toolkit for diagnosing and analysing network conditions, targeting both general and power users.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
