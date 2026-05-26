@@ -41,6 +41,7 @@ import com.example.ui.screens.wifi.WifiAnalyzerViewModel
 import com.example.ui.screens.speedtest.SpeedTestScreen
 import com.example.ui.screens.speedtest.SpeedTestViewModel
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -88,36 +89,34 @@ fun AppNavigation(
     val currentRoute = navBackStackEntry?.destination?.route ?: NavigationRoutes.PING.route
 
     Row(modifier = Modifier.fillMaxSize()) {
-        // Render Side Rail elements if on wider screen layouts
+        // Render Side elements if on wider screen layouts, styled to match the Bento visual theme and scrollable
         if (isLargeScreen) {
-            NavigationRail(
-                modifier = Modifier.fillMaxHeight(),
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface
+            Card(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(76.dp)
+                    .padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
-                NavigationRoutes.values().forEach { dest ->
-                    val isSelected = currentRoute == dest.route
-                    NavigationRailItem(
-                        selected = isSelected,
-                        onClick = {
-                            if (currentRoute != dest.route) {
-                                navController.navigate(dest.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                ScrollableNavigationColumn(
+                    currentRoute = currentRoute,
+                    items = NavigationRoutes.values(),
+                    onNavigate = { dest ->
+                        if (currentRoute != dest.route) {
+                            navController.navigate(dest.route) {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = if (isSelected) dest.selectedIcon else dest.unselectedIcon,
-                                contentDescription = dest.title
-                            )
-                        },
-                        label = { Text(dest.title, fontSize = 11.sp) }
-                    )
-                }
+                        }
+                    }
+                )
             }
         }
 
@@ -256,5 +255,59 @@ fun ScrollableNavigationRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ScrollableNavigationColumn(
+    currentRoute: String,
+    items: Array<NavigationRoutes>,
+    onNavigate: (NavigationRoutes) -> Unit
+) {
+    val scrollState = rememberScrollState()
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState),
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp, androidx.compose.ui.Alignment.Top)
+    ) {
+        Spacer(modifier = Modifier.height(12.dp))
+        items.forEach { dest ->
+            val isSelected = currentRoute == dest.route
+            Column(
+                modifier = Modifier
+                    .width(60.dp)
+                    .clickable { onNavigate(dest) },
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp, 28.dp)
+                        .background(
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isSelected) dest.selectedIcon else dest.unselectedIcon,
+                        contentDescription = dest.title,
+                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = dest.title,
+                    fontSize = 10.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
     }
 }
