@@ -1,5 +1,6 @@
 package com.example.ui.screens.wifi
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.net.wifi.ScanResult
@@ -80,6 +81,7 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun loadCurrentConnection() {
         try {
             val connectionInfo: WifiInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -121,6 +123,7 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun loadNearbyNetworks() {
         val list = mutableListOf<WifiNetwork>()
         try {

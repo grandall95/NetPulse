@@ -1,6 +1,5 @@
 package com.example.ui.screens.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,17 +24,18 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel
+    viewModel: SettingsViewModel,
 ) {
     val theme by viewModel.themeState.collectAsState()
     val dnsVal by viewModel.dnsState.collectAsState()
     val portLimit by viewModel.portConcurrencyState.collectAsState()
 
-    var showDnsDialog by remember { mutableStateOf(false) }
+    var showDnsDialog by remember { mutableStateOf(value = false) }
     var tempDnsVal by remember { mutableStateOf("") }
 
     var showAboutDialog by remember { mutableStateOf(false) }
 
+    val uriHandler = LocalUriHandler.current
     val scrollState = rememberScrollState()
 
     Column(
@@ -204,7 +205,7 @@ fun SettingsScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "NetPulse Diagnostics Studio v1.0.0",
+                        text = "NetPulse v1.0.0",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -290,6 +291,26 @@ fun SettingsScreen(
                     // Jetpack Compose
                     Text("Jetpack Compose Material 3", fontWeight = FontWeight.Bold)
                     Text("Declarative, interactive UI layouts built with Google's M3 specifications.\nLicense: Apache 2.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Developed by Gage Randall",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier
+                            .clickable { uriHandler.openUri("https://www.gagerandall.page/contact") }
+                            .padding(vertical = 4.dp)
+                    )
+
+                    Text(
+                        text = "Built with Open Source in Mind: GNU General Public License version 3",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier
+                            .clickable { uriHandler.openUri("https://opensource.org/license/GPL-3.0") }
+                            .padding(vertical = 4.dp)
+                    )
                 }
             },
             confirmButton = {
