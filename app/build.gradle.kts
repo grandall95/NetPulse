@@ -7,15 +7,15 @@ plugins {
 }
 
 android {
-  namespace = "com.example"
-  compileSdk { version = release(36) { minorApiLevel = 1 } }
+  namespace = "page.gagerandall.netpulse"
+  compileSdk = 37
 
   defaultConfig {
     applicationId = "page.gagerandall.netpulse"
     minSdk = 24
-    targetSdk = 36
+    targetSdk = 35
     versionCode = 1
-    versionName = "1.0"
+    versionName = "1.0.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -39,7 +39,8 @@ android {
   buildTypes {
     release {
       isCrunchPngs = false
-      isMinifyEnabled = false
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
@@ -100,7 +101,7 @@ dependencies {
   implementation(libs.retrofit)
   
   // Custom DNS resolver support
-  implementation("dnsjava:dnsjava:3.5.2")
+  implementation("dnsjava:dnsjava:3.6.5")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
