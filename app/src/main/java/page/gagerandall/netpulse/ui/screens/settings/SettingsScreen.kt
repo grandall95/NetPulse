@@ -271,19 +271,19 @@ fun SettingsScreen(
                     )
 
                     // DnsJava
-                    Text("DnsJava (Version 3.6.0)", fontWeight = FontWeight.Bold)
+                    Text("DnsJava (Version 3.6.5)", fontWeight = FontWeight.Bold)
                     Text("High performance, custom DNS packet resolver & parser.\nLicense: BSD 3-Clause\n", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                     // OkHttp
-                    Text("Square OkHttp (Version 4.10.0)", fontWeight = FontWeight.Bold)
+                    Text("Square OkHttp (Version 4.12.0)", fontWeight = FontWeight.Bold)
                     Text("Advanced connection pooling, header inspection, and automated TLS/SSL client APIs.\nLicense: Apache 2.0\n", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                     // Accompanist Permissions
-                    Text("Google Accompanist Permissions", fontWeight = FontWeight.Bold)
+                    Text("Google Accompanist Permissions (Version 0.37.0)", fontWeight = FontWeight.Bold)
                     Text("Idiomatic Jetpack Compose runtime permission workflows.\nLicense: Apache 2.0\n", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                     // Datastore
-                    Text("Androidx Jetpack DataStore", fontWeight = FontWeight.Bold)
+                    Text("Androidx Jetpack DataStore (Version 1.1.3)", fontWeight = FontWeight.Bold)
                     Text("Type-safe, persistent local preferences backed by Kotlin coroutines.\nLicense: Apache 2.0\n", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                     // Jetpack Compose
