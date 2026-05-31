@@ -287,9 +287,10 @@ fun WifiAnalyzerScreen(viewModel: WifiAnalyzerViewModel) {
         PermissionRationaleDialog(
             permissionLabel = "Fine Location Scan",
             rationaleText = "To scan nearby Wi-Fi network nodes and map channel congestion levels, Android requires active location permissions. Review setting grants?",
-            onDismiss = { },
+            onDismiss = { showPermissionRationale = false },
             onConfirm = {
                 locationPermissionState.launchPermissionRequest()
+                showPermissionRationale = false
             },
         )
     }

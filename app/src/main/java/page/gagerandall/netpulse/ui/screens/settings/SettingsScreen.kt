@@ -217,7 +217,7 @@ fun SettingsScreen(
     // Custom DNS Edit Dialog
     if (showDnsDialog) {
         AlertDialog(
-            onDismissRequest = { },
+            onDismissRequest = { showDnsDialog = false },
             title = { Text("Set Custom DNS Server") },
             text = {
                 Column {
@@ -234,12 +234,13 @@ fun SettingsScreen(
             confirmButton = {
                 Button(onClick = {
                     viewModel.setDefaultDns(tempDnsVal.trim().lowercase())
+                    showDnsDialog = false
                 }) {
                     Text("Apply")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { }) {
+                TextButton(onClick = { showDnsDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -249,7 +250,7 @@ fun SettingsScreen(
     // Open Source Libraries Dialog
     if (showAboutDialog) {
         AlertDialog(
-            onDismissRequest = { },
+            onDismissRequest = { showAboutDialog = false },
             title = {
                 Text(
                     text = "Open Source Integration Credits",
@@ -312,7 +313,7 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = { }) {
+                Button(onClick = { showAboutDialog = false }) {
                     Text("Close")
                 }
             }
