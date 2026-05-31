@@ -8,7 +8,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
@@ -32,10 +31,6 @@ class WhoisViewModel : ViewModel() {
     val state: StateFlow<WhoisDetails> = _state
 
     private var whoisJob: Job? = null
-
-    fun clear() {
-        _state.value = WhoisDetails()
-    }
 
     fun stopWhois() {
         whoisJob?.cancel()

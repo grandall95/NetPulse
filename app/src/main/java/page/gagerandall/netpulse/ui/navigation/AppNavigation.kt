@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -108,7 +107,7 @@ fun AppNavigation(
             ) {
                 ScrollableNavigationColumn(
                     currentRoute = currentRoute,
-                    items = NavigationRoutes.values(),
+                    items = NavigationRoutes.entries.toTypedArray(),
                     onNavigate = { dest ->
                         if (currentRoute != dest.route) {
                             navController.navigate(dest.route) {
@@ -189,7 +188,7 @@ fun AppNavigation(
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
                 ) {
-                    val list = NavigationRoutes.values()
+                    val list = NavigationRoutes.entries.toTypedArray()
                     ScrollableNavigationRow(
                         currentRoute = currentRoute,
                         items = list,

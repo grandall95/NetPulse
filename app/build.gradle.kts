@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -8,14 +10,14 @@ plugins {
 
 android {
   namespace = "page.gagerandall.netpulse"
-  compileSdk = 35
+  compileSdk = 37
 
   defaultConfig {
     applicationId = "page.gagerandall.netpulse"
     minSdk = 24
     targetSdk = 35
-    versionCode = 1
-    versionName = "1.0.0"
+    versionCode = 2
+    versionName = "1.0.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -64,6 +66,12 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
+kotlin {
+  compilerOptions {
+    jvmTarget.set(JvmTarget.JVM_11)
+  }
+}
+
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
 secrets {
@@ -106,7 +114,7 @@ dependencies {
   implementation(libs.retrofit)
   
   // Custom DNS resolver support
-  implementation("dnsjava:dnsjava:3.6.5")
+  implementation(libs.dnsjava)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

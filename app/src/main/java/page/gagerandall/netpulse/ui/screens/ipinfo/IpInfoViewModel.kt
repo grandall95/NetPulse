@@ -37,10 +37,6 @@ class IpInfoViewModel : ViewModel() {
         fetchIpDetails()
     }
 
-    fun clear() {
-        _state.value = IpInfoDetails()
-    }
-
     fun fetchIpDetails(useIpv6Endpoint: Boolean = false) {
         _state.value = _state.value.copy(status = "Running")
         viewModelScope.launch(Dispatchers.IO) {

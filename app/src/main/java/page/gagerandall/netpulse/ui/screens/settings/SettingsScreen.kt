@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import page.gagerandall.netpulse.BuildConfig
 
 @Composable
 fun SettingsScreen(
@@ -203,7 +204,7 @@ fun SettingsScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "NetPulse v1.0.0",
+                        text = "NetPulse v${BuildConfig.VERSION_NAME}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -216,7 +217,7 @@ fun SettingsScreen(
     // Custom DNS Edit Dialog
     if (showDnsDialog) {
         AlertDialog(
-            onDismissRequest = { showDnsDialog = false },
+            onDismissRequest = { },
             title = { Text("Set Custom DNS Server") },
             text = {
                 Column {
@@ -233,13 +234,12 @@ fun SettingsScreen(
             confirmButton = {
                 Button(onClick = {
                     viewModel.setDefaultDns(tempDnsVal.trim().lowercase())
-                    showDnsDialog = false
                 }) {
                     Text("Apply")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDnsDialog = false }) {
+                TextButton(onClick = { }) {
                     Text("Cancel")
                 }
             }
@@ -249,7 +249,7 @@ fun SettingsScreen(
     // Open Source Libraries Dialog
     if (showAboutDialog) {
         AlertDialog(
-            onDismissRequest = { showAboutDialog = false },
+            onDismissRequest = { },
             title = {
                 Text(
                     text = "Open Source Integration Credits",
@@ -312,7 +312,7 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = { showAboutDialog = false }) {
+                Button(onClick = { }) {
                     Text("Close")
                 }
             }

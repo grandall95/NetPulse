@@ -40,10 +40,6 @@ class SpeedTestViewModel : ViewModel() {
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 
-    fun clear() {
-        _state.value = SpeedTestState()
-    }
-
     fun runSpeedTest() {
         _state.value = SpeedTestState(status = "Measuring Latency...")
         viewModelScope.launch(Dispatchers.IO) {

@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -171,8 +170,7 @@ fun TracerouteScreen(viewModel: TracerouteViewModel) {
                     viewModel.startTraceroute(
                         host = hostInput,
                         maxHops = if (selectedTab == 0) 30 else mh,
-                        timeoutMs = if (selectedTab == 0) 1000 else tms,
-                        probes = if (selectedTab == 0) 3 else pr
+                        timeoutMs = if (selectedTab == 0) 1000 else tms
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),

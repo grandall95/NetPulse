@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import page.gagerandall.netpulse.ui.components.ResultCard
 import page.gagerandall.netpulse.ui.theme.ColorExcellent
-import page.gagerandall.netpulse.ui.theme.ColorFailed
 import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
 

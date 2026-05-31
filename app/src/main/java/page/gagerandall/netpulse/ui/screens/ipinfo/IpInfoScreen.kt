@@ -12,7 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -204,7 +203,7 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
                                     fallbackIpv6Toggle = it
                                     viewModel.fetchIpDetails(it)
                                 },
-                                modifier = Modifier.scale(0.8f)
+                                modifier = Modifier.scale()
                             )
                         }
                     }
@@ -227,6 +226,6 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
     }
 }
 
-private fun Modifier.scale(scale: Float) = this.then(
+private fun Modifier.scale() = this.then(
     Modifier.padding(0.dp) // dummy padding to keep standard import scale
 )

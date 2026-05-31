@@ -36,3 +36,8 @@
 -dontwarn javax.naming.directory.InitialDirContext
 -dontwarn lombok.Generated
 -dontwarn org.slf4j.impl.StaticLoggerBinder
+
+# Additional warnings from dnsjava/jna
+-dontwarn com.sun.jna.Structure$ByReference
+-dontwarn org.xbill.DNS.spi.DnsjavaInetAddressResolverProvider
+-dontwarn sun.net.spi.nameservice.NameServiceDescriptor

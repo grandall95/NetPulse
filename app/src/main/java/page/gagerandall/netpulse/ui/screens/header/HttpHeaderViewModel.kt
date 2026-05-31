@@ -41,10 +41,6 @@ class HttpHeaderViewModel : ViewModel() {
     private val _state = MutableStateFlow(InspectorState())
     val state: StateFlow<InspectorState> = _state
 
-    fun clear() {
-        _state.value = InspectorState()
-    }
-
     fun inspectUrl(
         urlInput: String,
         method: String = "GET",

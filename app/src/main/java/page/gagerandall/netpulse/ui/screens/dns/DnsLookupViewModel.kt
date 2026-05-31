@@ -30,10 +30,6 @@ class DnsLookupViewModel : ViewModel() {
     private val _state = MutableStateFlow(DnsQueryState())
     val state: StateFlow<DnsQueryState> = _state
 
-    fun clear() {
-        _state.value = DnsQueryState()
-    }
-
     fun lookupDns(
         domain: String,
         recordTypeStr: String,

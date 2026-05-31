@@ -8,7 +8,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.*
@@ -22,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import page.gagerandall.netpulse.ui.components.ResultCard
 import page.gagerandall.netpulse.ui.theme.ColorExcellent
-import page.gagerandall.netpulse.ui.theme.ColorFailed
 import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
 

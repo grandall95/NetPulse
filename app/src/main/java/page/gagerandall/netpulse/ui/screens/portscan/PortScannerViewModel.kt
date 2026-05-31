@@ -40,10 +40,6 @@ class PortScannerViewModel : ViewModel() {
 
     private var scanJob: Job? = null
 
-    fun clear() {
-        _state.value = ScanState()
-    }
-
     fun stopScan() {
         scanJob?.cancel()
         scanJob = null

@@ -37,10 +37,6 @@ class TracerouteViewModel : ViewModel() {
     private var tracerouteJob: Job? = null
     private var activeProcess: Process? = null
 
-    fun clear() {
-        _results.value = TracerouteResults()
-    }
-
     fun stopTraceroute() {
         tracerouteJob?.cancel()
         tracerouteJob = null
@@ -56,8 +52,7 @@ class TracerouteViewModel : ViewModel() {
     fun startTraceroute(
         host: String,
         maxHops: Int = 30,
-        timeoutMs: Int = 1000,
-        probes: Int = 3
+        timeoutMs: Int = 1000
     ) {
         _results.value = TracerouteResults(status = "Running", maxHops = maxHops)
         tracerouteJob = viewModelScope.launch(Dispatchers.IO) {
@@ -137,8 +132,7 @@ class TracerouteViewModel : ViewModel() {
     private suspend fun runFallbackTraceroute(host: String, maxHops: Int, logs: MutableList<String>) {
         withContext(Dispatchers.IO) {
             val hopsList = mutableListOf<TracerouteHop>()
-            var targetIp = ""
-            targetIp = try {
+            var targetIp: String = try {
                 InetAddress.getByName(host).hostAddress ?: host
             } catch (e: Exception) {
                 host
