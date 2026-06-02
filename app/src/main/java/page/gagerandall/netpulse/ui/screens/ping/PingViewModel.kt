@@ -1,5 +1,9 @@
 package page.gagerandall.netpulse.ui.screens.ping
 
+import android.system.ErrnoException
+import android.system.Os
+import android.system.OsConstants
+import android.system.StructTimeval
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -10,8 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
+import java.io.FileDescriptor
 import java.io.InputStreamReader
 import java.net.InetAddress
+import java.nio.ByteBuffer
 import java.util.regex.Pattern
 
 class PingViewModel : ViewModel() {
@@ -62,14 +68,162 @@ class PingViewModel : ViewModel() {
                 return@launch
             }
 
+            // Tier 1: Try unprivileged ICMP datagram sockets
+            val socketSuccess = tryIcmpSocketPing(cleanedHost, count, size, timeoutSec, ttl)
+            if (socketSuccess) return@launch
+
+            // Tier 2: Try native command execution (fallback)
+            val binarySuccess = tryNativeBinaryPing(cleanedHost, count, size, timeoutSec, ttl)
+            if (binarySuccess) return@launch
+
+            // Tier 3: Failsafe Java InetAddress / HTTP
+            if (isActive) {
+                val fallbackLogs = mutableListOf(
+                    "Unprivileged ICMP socket check failed or not permitted by kernel.",
+                    "Native Ping binary execution failed/restricted on this device.",
+                    "Initiating HTTP/Java Reachability fallback..."
+                )
+                runFallbackInet(cleanedHost, count, fallbackLogs)
+            }
+        }
+    }
+
+    private suspend fun tryIcmpSocketPing(
+        host: String,
+        count: Int,
+        size: Int,
+        timeoutSec: Int,
+        ttl: Int
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            var socketFd: FileDescriptor? = null
             try {
-                // Check if binary can be run
+                socketFd = Os.socket(
+                    OsConstants.AF_INET,
+                    OsConstants.SOCK_DGRAM,
+                    OsConstants.IPPROTO_ICMP
+                )
+
+                val timeoutValue = StructTimeval.fromMillis((timeoutSec * 1000).toLong())
+                Os.setsockoptTimeval(socketFd, OsConstants.SOL_SOCKET, OsConstants.SO_RCVTIMEO, timeoutValue)
+                Os.setsockoptInt(socketFd, OsConstants.IPPROTO_IP, OsConstants.IP_TTL, ttl)
+
+                val address = InetAddress.getByName(host)
+                val logs = mutableListOf<String>()
+                val rtts = mutableListOf<Float>()
+                var sent = 0
+                var received = 0
+
+                logs.add("Pinging ${address.hostAddress} using unprivileged ICMP socket...")
+
+                for (i in 1..count) {
+                    if (!isActive) break
+
+                    val sequence = i
+                    val requestPacket = constructIcmpEchoRequest(sequence, size)
+                    val startTime = System.currentTimeMillis()
+
+                    try {
+                        Os.sendto(socketFd, ByteBuffer.wrap(requestPacket), 0, address, 0)
+                        sent++
+
+                        val responseBuffer = ByteBuffer.allocate(65535)
+                        Os.recvfrom(socketFd, responseBuffer, 0, null)
+
+                        val duration = (System.currentTimeMillis() - startTime).toFloat()
+                        
+                        responseBuffer.flip()
+                        val bytesReceived = responseBuffer.remaining()
+                        if (bytesReceived >= 8) {
+                            val replyType = responseBuffer.get(0).toInt() and 0xFF
+                            val replyCode = responseBuffer.get(1).toInt() and 0xFF
+                            val replySequence = responseBuffer.getShort(6)
+
+                            if (replyType == 0 && replyCode == 0) {
+                                received++
+                                rtts.add(duration)
+                                logs.add("${bytesReceived} bytes from ${address.hostAddress}: icmp_seq=$replySequence time=${String.format("%.1f", duration)} ms")
+                            } else {
+                                logs.add("Received non-reply ICMP type=$replyType code=$replyCode from ${address.hostAddress}")
+                            }
+                        } else {
+                            logs.add("Received truncated packet of size $bytesReceived bytes")
+                        }
+                    } catch (e: ErrnoException) {
+                        if (e.errno == OsConstants.EAGAIN) {
+                            logs.add("Request timeout for icmp_seq=$sequence")
+                        } else {
+                            logs.add("Socket error on seq=$sequence: ${e.message}")
+                        }
+                    } catch (e: Exception) {
+                        logs.add("Error sending/receiving seq=$sequence: ${e.message}")
+                    }
+
+                    if (isActive) {
+                        _pingResults.value = _pingResults.value.copy(
+                            individualRtts = rtts.toList(),
+                            packetsSent = sent,
+                            packetsReceived = received,
+                            rawLogs = logs.toList()
+                        )
+                    }
+
+                    if (i < count && isActive) {
+                        var slept = 0
+                        while (slept < 1000 && isActive) {
+                            Thread.sleep(50)
+                            slept += 50
+                        }
+                    }
+                }
+
+                if (!isActive) return@withContext false
+
+                if (sent > 0) {
+                    val min = rtts.minOrNull() ?: 0f
+                    val max = rtts.maxOrNull() ?: 0f
+                    val avg = rtts.average().toFloat()
+                    val loss = (((sent - received).toFloat() / sent) * 100).coerceIn(0f, 100f)
+
+                    _pingResults.value = PingResults(
+                        minRtt = min,
+                        avgRtt = avg,
+                        maxRtt = max,
+                        packetLoss = loss,
+                        status = "Complete",
+                        isFallback = false,
+                        packetsSent = sent,
+                        packetsReceived = received,
+                        individualRtts = rtts,
+                        rawLogs = logs
+                    )
+                    return@withContext true
+                }
+                return@withContext false
+            } catch (e: Exception) {
+                return@withContext false
+            } finally {
+                socketFd?.let {
+                    try { Os.close(it) } catch (ignored: Exception) {}
+                }
+            }
+        }
+    }
+
+    private suspend fun tryNativeBinaryPing(
+        host: String,
+        count: Int,
+        size: Int,
+        timeoutSec: Int,
+        ttl: Int
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
                 val command = mutableListOf("ping", "-c", count.toString(), "-s", size.toString(), "-W", timeoutSec.toString())
-                // Only add -t if running on device and supported (some embedded ping variants do not support -t)
                 if (ttl != 64) {
                     command.addAll(listOf("-t", ttl.toString()))
                 }
-                command.add(cleanedHost)
+                command.add(host)
 
                 val process = Runtime.getRuntime().exec(command.toTypedArray())
                 activeProcess = process
@@ -97,7 +251,6 @@ class PingViewModel : ViewModel() {
                             if (matcher.find()) {
                                 matcher.group(1)?.toFloatOrNull()?.let {
                                     rtts.add(it)
-                                    // Update dynamic progress
                                     if (isActive) {
                                         _pingResults.value = _pingResults.value.copy(
                                             individualRtts = rtts.toList(),
@@ -123,18 +276,17 @@ class PingViewModel : ViewModel() {
                     activeProcess = null
                 }
 
-                if (!isActive) return@launch
+                if (!isActive) return@withContext false
 
-                // If error or empty, fall back directly
                 val errText = errorReader.readText()
                 if (logs.isEmpty() && errText.isNotEmpty()) {
-                    logs.add("Standard binary failed: $errText")
-                    logs.add("Switching to fallback java.net.InetAddress check...")
-                    runFallbackInet(cleanedHost, count, logs)
-                    return@launch
+                    return@withContext false
                 }
 
-                // Compile stats from logs or regex
+                if (rtts.isEmpty() && sent == 0) {
+                    return@withContext false
+                }
+
                 var min = 0f
                 var avg = 0f
                 var max = 0f
@@ -160,14 +312,58 @@ class PingViewModel : ViewModel() {
                         rawLogs = logs
                     )
                 }
-
+                return@withContext true
             } catch (e: Exception) {
-                if (isActive) {
-                    val logs = mutableListOf("Exception: ${e.message}", "Reverting to InetAddress.isReachable check...")
-                    runFallbackInet(cleanedHost, count, logs)
-                }
+                return@withContext false
             }
         }
+    }
+
+    private fun constructIcmpEchoRequest(sequence: Int, payloadSize: Int): ByteArray {
+        val headerSize = 8
+        val buffer = ByteBuffer.allocate(headerSize + payloadSize)
+        
+        buffer.put(8.toByte()) // Type: Echo Request (8)
+        buffer.put(0.toByte()) // Code: 0
+        buffer.putShort(0.toShort()) // Checksum placeholder
+        buffer.putShort(0x1234.toShort()) // Identifier
+        buffer.putShort(sequence.toShort()) // Sequence number
+        
+        for (i in 0 until payloadSize) {
+            buffer.put(0.toByte())
+        }
+        
+        val packet = buffer.array()
+        val checksum = calculateChecksum(packet)
+        
+        packet[2] = ((checksum.toInt() shr 8) and 0xFF).toByte()
+        packet[3] = (checksum.toInt() and 0xFF).toByte()
+        
+        return packet
+    }
+
+    private fun calculateChecksum(buf: ByteArray): Short {
+        var length = buf.size
+        var i = 0
+        var sum = 0
+        
+        while (length > 1) {
+            val first = buf[i].toInt() and 0xFF
+            val second = buf[i + 1].toInt() and 0xFF
+            sum += (first shl 8) or second
+            i += 2
+            length -= 2
+        }
+        if (length > 0) {
+            val first = buf[i].toInt() and 0xFF
+            sum += (first shl 8)
+        }
+        
+        while ((sum shr 16) != 0) {
+            sum = (sum and 0xFFFF) + (sum shr 16)
+        }
+        
+        return sum.inv().toShort()
     }
 
     private suspend fun runFallbackInet(host: String, count: Int, startLogs: MutableList<String>) {

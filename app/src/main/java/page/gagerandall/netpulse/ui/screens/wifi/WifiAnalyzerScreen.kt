@@ -72,11 +72,6 @@ fun WifiAnalyzerScreen(viewModel: WifiAnalyzerViewModel) {
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
-                Text(
-                    text = "Network Studio • RF interference detection",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
 

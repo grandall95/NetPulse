@@ -12,6 +12,8 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.InetAddress
+import java.util.Locale
+import java.util.regex.Pattern
 
 class TracerouteViewModel : ViewModel() {
 
@@ -106,8 +108,12 @@ class TracerouteViewModel : ViewModel() {
                 val errText = errorReader.readText()
                 if (!nativeWorked || hopsList.isEmpty()) {
                     logs.add("Native traceroute unsupported or returned empty: $errText")
-                    logs.add("Reverting to dynamic ICMP Reachability traceroute simulator...")
-                    runFallbackTraceroute(cleanedHost, maxHops, logs)
+                    logs.add("Attempting native ping-based traceroute...")
+                    val pingWorked = runPingTraceroute(cleanedHost, maxHops, timeoutMs, logs)
+                    if (!pingWorked) {
+                        logs.add("Reverting to dynamic ICMP Reachability traceroute simulator...")
+                        runFallbackTraceroute(cleanedHost, maxHops, logs)
+                    }
                     return@launch
                 }
 
@@ -122,10 +128,154 @@ class TracerouteViewModel : ViewModel() {
 
             } catch (e: Exception) {
                 if (isActive) {
-                    val logs = mutableListOf("Exception: ${e.message}", "Reverting to simulated router hops...")
-                    runFallbackTraceroute(cleanedHost, maxHops, logs)
+                    val logs = mutableListOf("Exception: ${e.message}", "Attempting native ping-based traceroute...")
+                    val pingWorked = runPingTraceroute(cleanedHost, maxHops, timeoutMs, logs)
+                    if (!pingWorked) {
+                        logs.add("Reverting to simulated router hops...")
+                        runFallbackTraceroute(cleanedHost, maxHops, logs)
+                    }
                 }
             }
+        }
+    }
+
+    private suspend fun runPingTraceroute(
+        host: String,
+        maxHops: Int,
+        timeoutMs: Int,
+        logs: MutableList<String>
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            val hopsList = mutableListOf<TracerouteHop>()
+            val targetIp: String = try {
+                InetAddress.getByName(host).hostAddress ?: host
+            } catch (e: Exception) {
+                host
+            }
+
+            if (!isActive) return@withContext false
+            logs.add("Running native ping-based traceroute to $host ($targetIp)...")
+
+            var reachedDestination = false
+
+            for (ttl in 1..maxHops) {
+                if (!isActive) break
+
+                val command = arrayOf(
+                    "ping",
+                    "-c", "1",
+                    "-t", ttl.toString(),
+                    "-W", (timeoutMs / 1000).coerceAtLeast(1).toString(),
+                    targetIp
+                )
+
+                val startTime = System.currentTimeMillis()
+                var process: Process? = null
+                var hopIp: String? = null
+                var isReached = false
+                val pingLogs = mutableListOf<String>()
+
+                try {
+                    process = Runtime.getRuntime().exec(command)
+                    activeProcess = process
+                    val reader = BufferedReader(InputStreamReader(process.inputStream))
+                    
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        val l = line ?: ""
+                        pingLogs.add(l)
+                        
+                        // Parse TTL Exceeded
+                        if (l.contains("Time to live exceeded", ignoreCase = true) || l.contains("time-to-live exceeded", ignoreCase = true)) {
+                            val matcher = Pattern.compile("(?i)(?:from|from\\s+raw\\s+address)\\s+([^\\s:()]+)").matcher(l)
+                            if (matcher.find()) {
+                                hopIp = matcher.group(1)
+                            }
+                        }
+                        // Parse successful ping to destination
+                        else if (l.contains("bytes from", ignoreCase = true) && (l.contains("ttl=", ignoreCase = true) || l.contains("time=", ignoreCase = true))) {
+                            val matcher = Pattern.compile("(?i)(?:from|from\\s+raw\\s+address)\\s+([^\\s:()]+)").matcher(l)
+                            if (matcher.find()) {
+                                hopIp = matcher.group(1)
+                                isReached = true
+                            }
+                        }
+                    }
+                    process.waitFor()
+                } catch (e: Exception) {
+                    logs.add("TTL $ttl: Process error: ${e.message}")
+                } finally {
+                    process?.destroy()
+                    activeProcess = null
+                }
+
+                val duration = (System.currentTimeMillis() - startTime).toFloat()
+
+                if (hopIp != null) {
+                    var hostname = hopIp
+                    try {
+                        hostname = InetAddress.getByName(hopIp).hostName
+                    } catch (e: Exception) {
+                        // ignore, keep IP
+                    }
+
+                    val hop = TracerouteHop(
+                        hopNumber = ttl,
+                        hostname = hostname,
+                        ipAddress = hopIp,
+                        rttMs = duration
+                    )
+                    hopsList.add(hop)
+                    logs.add(" $ttl  $hostname ($hopIp)  ${String.format(Locale.US, "%.1f", duration)} ms")
+                } else {
+                    val hop = TracerouteHop(
+                        hopNumber = ttl,
+                        hostname = "*",
+                        ipAddress = "*",
+                        rttMs = 0f
+                    )
+                    hopsList.add(hop)
+                    logs.add(" $ttl  *  *  *")
+                }
+
+                // Update UI state
+                if (isActive) {
+                    _results.value = _results.value.copy(
+                        status = "Running",
+                        hops = hopsList.toList(),
+                        rawOutput = logs.toList(),
+                        isFallback = false
+                    )
+                }
+
+                if (isReached || hopIp == targetIp) {
+                    reachedDestination = true
+                    break
+                }
+
+                // Sleep a little bit between hops to avoid overloading the system
+                var slept = 0
+                while (slept < 100 && isActive) {
+                    Thread.sleep(20)
+                    slept += 20
+                }
+            }
+
+            if (!isActive) return@withContext false
+
+            // If we successfully traced some hops, consider it a success
+            if (hopsList.any { it.ipAddress != "*" }) {
+                _results.value = _results.value.copy(
+                    status = "Complete",
+                    hops = hopsList.toList(),
+                    rawOutput = logs.toList(),
+                    isFallback = false,
+                    routeComplete = reachedDestination
+                )
+                return@withContext true
+            }
+
+            return@withContext false
         }
     }
 

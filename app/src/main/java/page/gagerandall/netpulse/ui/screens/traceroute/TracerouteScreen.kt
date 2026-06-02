@@ -164,7 +164,7 @@ fun TracerouteScreen(viewModel: TracerouteViewModel) {
             Button(
                 onClick = {
                     val mh = maxHopsInput.toIntOrNull() ?: 30
-                    val pr = probesInput.toIntOrNull() ?: 3
+                    probesInput.toIntOrNull() ?: 3
                     val tms = timeoutInput.toIntOrNull() ?: 1000
 
                     viewModel.startTraceroute(
@@ -257,10 +257,10 @@ fun TracerouteScreen(viewModel: TracerouteViewModel) {
                             )
                         }
                         Text(
-                            text = "${String.format(Locale.US, "%.1f", hop.rttMs)} ms",
+                            text = if (hop.ipAddress == "*" || hop.rttMs <= 0f) "*" else "${String.format(Locale.US, "%.1f", hop.rttMs)} ms",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (hop.rttMs < 40f) ColorExcellent else if (hop.rttMs < 110f) ColorGood else ColorPoor
+                            color = if (hop.ipAddress == "*" || hop.rttMs <= 0f) MaterialTheme.colorScheme.onSurfaceVariant else if (hop.rttMs < 40f) ColorExcellent else if (hop.rttMs < 110f) ColorGood else ColorPoor
                         )
                     }
                 }

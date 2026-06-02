@@ -3,13 +3,18 @@ package page.gagerandall.netpulse.ui.screens.speedtest
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -108,52 +113,91 @@ class SpeedTestViewModel : ViewModel() {
         }
     }
 
-    private fun measureDownload() {
-        // Download 2 blocks: 1MB and then 3MB
-        val bytesList = listOf(1_000_000L, 3_000_000L)
+    private suspend fun measureDownload() {
+        val parallelConnections = 3
+        val downloadSizePerConnection = 25_000_000L // 25MB per connection
+        val totalBytesDownloaded = java.util.concurrent.atomic.AtomicLong(0)
+        
+        val testStartTime = System.nanoTime()
+        val durationLimitNs = 5_000_000_000L // 5 seconds
+        val isFinished = java.util.concurrent.atomic.AtomicBoolean(false)
         val speeds = mutableListOf<Float>()
-        var totalBytes = 0L
-        val testStartTime = System.currentTimeMillis()
 
-        bytesList.forEachIndexed { index, bytesCount ->
-            val request = Request.Builder()
-                .url("https://speed.cloudflare.com/__down?bytes=$bytesCount")
-                .build()
-
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Download block failed: $response")
-                val responseBody = response.body ?: throw IOException("Empty download payload")
-
-                val inputStream = responseBody.byteStream()
-                val buffer = ByteArray(16384)
-                var bytesRead: Int
-                val blockStartTime = System.nanoTime()
-                var bytesReadInBlock = 0L
-
-                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                    bytesReadInBlock += bytesRead
-                    totalBytes += bytesRead
-
-                    val elapsedNano = System.nanoTime() - blockStartTime
-                    if (elapsedNano > 0) {
-                        // Calculate instant mbps
-                        val mbps = (bytesReadInBlock * 8f / 1_000_000f) / (elapsedNano / 1_000_000_000f)
-                        if (mbps > 0f && mbps < 10000f) {
+        coroutineScope {
+            val samplingJob = launch(Dispatchers.Default) {
+                var lastBytes = 0L
+                var lastTime = System.nanoTime()
+                
+                while (!isFinished.get()) {
+                    delay(200L)
+                    val currentBytes = totalBytesDownloaded.get()
+                    val currentTime = System.nanoTime()
+                    val elapsedSec = (currentTime - lastTime) / 1_000_000_000f
+                    if (elapsedSec > 0f) {
+                        val deltaBytes = currentBytes - lastBytes
+                        val mbps = (deltaBytes * 8f / 1_000_000f) / elapsedSec
+                        
+                        if (mbps > 0f) {
                             speeds.add(mbps)
+                            
+                            val totalDurationSec = (currentTime - testStartTime) / 1_000_000_000f
+                            val progress = minOf(1.0f, totalDurationSec / 5.0f)
+                            
                             _state.value = _state.value.copy(
                                 downloadMbps = mbps,
-                                downloadProgress = (index * 0.5f) + ((bytesReadInBlock.toFloat() / bytesCount) * 0.5f),
+                                downloadProgress = progress,
                                 realTimeSpeeds = speeds.toList(),
-                                bytesDownloaded = totalBytes
+                                bytesDownloaded = currentBytes
                             )
                         }
+                        lastBytes = currentBytes
+                        lastTime = currentTime
                     }
                 }
             }
+
+            val downloadJobs = List(parallelConnections) {
+                launch(Dispatchers.IO) {
+                    try {
+                        val request = Request.Builder()
+                            .url("https://speed.cloudflare.com/__down?bytes=$downloadSizePerConnection")
+                            .build()
+
+                        okHttpClient.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) throw IOException("Download block failed: $response")
+                            val responseBody = response.body
+
+                            val inputStream = responseBody.byteStream()
+                            val buffer = ByteArray(16384)
+                            var bytesRead: Int
+
+                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                val elapsedNano = System.nanoTime() - testStartTime
+                                if (elapsedNano >= durationLimitNs) {
+                                    break
+                                }
+                                totalBytesDownloaded.addAndGet(bytesRead.toLong())
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // ignore or log
+                    }
+                }
+            }
+
+            downloadJobs.forEach { it.join() }
+            isFinished.set(true)
+            samplingJob.join()
         }
 
-        val totalDurationSec = (System.currentTimeMillis() - testStartTime) / 1000f
-        val avgDownload = if (speeds.isNotEmpty()) speeds.average().toFloat() else 0f
+        val totalDurationSec = (System.nanoTime() - testStartTime) / 1_000_000_000f
+        val avgDownload = if (speeds.size > 5) {
+            speeds.subList(5, speeds.size).average().toFloat()
+        } else if (speeds.isNotEmpty()) {
+            speeds.average().toFloat()
+        } else {
+            0f
+        }
 
         _state.value = _state.value.copy(
             downloadMbps = avgDownload,
@@ -162,46 +206,124 @@ class SpeedTestViewModel : ViewModel() {
         )
     }
 
-    private fun measureUpload() {
-        // Post 2 blocks of 1MB each
-        val uploadBytesCount = 1_000_000
-        val uploadData = ByteArray(uploadBytesCount) // Filled with dummy null bytes
+    private suspend fun measureUpload() {
+        val parallelConnections = 3
+        val uploadSizePerConnection = 15_000_000L // 15MB per connection
+        val totalBytesUploaded = java.util.concurrent.atomic.AtomicLong(0)
+        
+        val testStartTime = System.nanoTime()
+        val durationLimitNs = 5_000_000_000L // 5 seconds
+        val stopUpload = java.util.concurrent.atomic.AtomicBoolean(false)
         val speeds = mutableListOf<Float>()
-        var totalBytesUploaded = 0L
-        val testStartTime = System.currentTimeMillis()
 
-        for (i in 1..2) {
-            val requestBody = uploadData.toRequestBody("application/octet-stream".toMediaType())
-            val request = Request.Builder()
-                .url("https://speed.cloudflare.com/__up")
-                .post(requestBody)
-                .build()
-
-            val blockStartTime = System.nanoTime()
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Upload failed block $i: $response")
-                val elapsedNano = System.nanoTime() - blockStartTime
-                totalBytesUploaded += uploadBytesCount
-
-                if (elapsedNano > 0) {
-                    val mbps = (uploadBytesCount * 8f / 1_000_000f) / (elapsedNano / 1_000_000_000f)
-                    speeds.add(mbps)
-                    _state.value = _state.value.copy(
-                        uploadMbps = mbps,
-                        uploadProgress = i * 0.5f,
-                        realTimeSpeeds = _state.value.realTimeSpeeds + mbps,
-                        bytesUploaded = totalBytesUploaded
-                    )
+        coroutineScope {
+            val samplingJob = launch(Dispatchers.Default) {
+                var lastBytes = 0L
+                var lastTime = System.nanoTime()
+                
+                while (!stopUpload.get()) {
+                    delay(200L)
+                    val currentBytes = totalBytesUploaded.get()
+                    val currentTime = System.nanoTime()
+                    val elapsedSec = (currentTime - lastTime) / 1_000_000_000f
+                    if (elapsedSec > 0f) {
+                        val deltaBytes = currentBytes - lastBytes
+                        val mbps = (deltaBytes * 8f / 1_000_000f) / elapsedSec
+                        
+                        if (mbps > 0f) {
+                            speeds.add(mbps)
+                            
+                            val totalDurationSec = (currentTime - testStartTime) / 1_000_000_000f
+                            val progress = minOf(1.0f, totalDurationSec / 5.0f)
+                            
+                            _state.value = _state.value.copy(
+                                uploadMbps = mbps,
+                                uploadProgress = progress,
+                                realTimeSpeeds = _state.value.realTimeSpeeds + mbps,
+                                bytesUploaded = currentBytes
+                            )
+                        }
+                        lastBytes = currentBytes
+                        lastTime = currentTime
+                    }
                 }
             }
+
+            val uploadJobs = List(parallelConnections) {
+                launch(Dispatchers.IO) {
+                    try {
+                        val requestBody = CountingRequestBody(
+                            contentType = "application/octet-stream".toMediaType(),
+                            size = uploadSizePerConnection,
+                            onBytesWritten = { bytes ->
+                                totalBytesUploaded.addAndGet(bytes)
+                            },
+                            shouldStop = {
+                                val elapsed = System.nanoTime() - testStartTime
+                                val stop = elapsed >= durationLimitNs || stopUpload.get()
+                                if (stop) {
+                                    stopUpload.set(true)
+                                }
+                                stop
+                            }
+                        )
+
+                        val request = Request.Builder()
+                            .url("https://speed.cloudflare.com/__up")
+                            .post(requestBody)
+                            .build()
+
+                        okHttpClient.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) throw IOException("Upload block failed: $response")
+                        }
+                    } catch (e: Exception) {
+                        // ignore or log
+                    }
+                }
+            }
+
+            uploadJobs.forEach { it.join() }
+            stopUpload.set(true)
+            samplingJob.join()
         }
 
-        val avgUpload = if (speeds.isNotEmpty()) speeds.average().toFloat() else 0f
+        val totalDurationSec = (System.nanoTime() - testStartTime) / 1_000_000_000f
+        val avgUpload = if (speeds.size > 5) {
+            speeds.subList(5, speeds.size).average().toFloat()
+        } else if (speeds.isNotEmpty()) {
+            speeds.average().toFloat()
+        } else {
+            0f
+        }
+
         val current = _state.value
         _state.value = current.copy(
             uploadMbps = avgUpload,
             uploadProgress = 1.0f,
-            durationSec = current.durationSec + ((System.currentTimeMillis() - testStartTime) / 1000f)
+            durationSec = current.durationSec + totalDurationSec
         )
+    }
+}
+
+private class CountingRequestBody(
+    private val contentType: MediaType?,
+    private val size: Long,
+    private val onBytesWritten: (Long) -> Unit,
+    private val shouldStop: () -> Boolean
+) : RequestBody() {
+    override fun contentType() = contentType
+    override fun contentLength() = size
+
+    override fun writeTo(sink: BufferedSink) {
+        val buffer = ByteArray(16384)
+        var written = 0L
+        while (written < size) {
+            if (shouldStop()) break
+            val toWrite = minOf(buffer.size.toLong(), size - written).toInt()
+            sink.write(buffer, 0, toWrite)
+            sink.flush()
+            written += toWrite
+            onBytesWritten(toWrite.toLong())
+        }
     }
 }

@@ -8,9 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,11 +24,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
 ) {
     val theme by viewModel.themeState.collectAsState()
-    val dnsVal by viewModel.dnsState.collectAsState()
-    val portLimit by viewModel.portConcurrencyState.collectAsState()
-
-    var showDnsDialog by remember { mutableStateOf(false) }
-    var tempDnsVal by remember { mutableStateOf("") }
 
     var showAboutDialog by remember { mutableStateOf(false) }
 
@@ -44,7 +37,7 @@ fun SettingsScreen(
             .padding(16.dp),
     ) {
         Text(
-            text = "Settings & Specifications",
+            text = "Settings & Preferences",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -96,84 +89,7 @@ fun SettingsScreen(
             }
         }
 
-        // Port Scanner Limit
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Speed,
-                        contentDescription = "Speed Icon",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(end = 12.dp)
-                    )
-                    Text(
-                        text = "Port Scanner Concurrency",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Current maximum simultaneous probes: $portLimit threads",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Slider(
-                    value = portLimit.toFloat(),
-                    onValueChange = { viewModel.setPortConcurrency(it.toInt()) },
-                    valueRange = 10f..200f,
-                    steps = 19
-                )
-            }
-        }
 
-        // DNS Prefs
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp)
-                .clickable {
-                    tempDnsVal = dnsVal
-                    showDnsDialog = true
-                },
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Dns,
-                    contentDescription = "DNS Icon",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(end = 12.dp)
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Custom DNS Server",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Active host: ${if (dnsVal == "system") "System Default" else dnsVal}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Edit")
-            }
-        }
 
         // About / Open Source Licenses
         Card(
@@ -214,38 +130,6 @@ fun SettingsScreen(
         }
     }
 
-    // Custom DNS Edit Dialog
-    if (showDnsDialog) {
-        AlertDialog(
-            onDismissRequest = { showDnsDialog = false },
-            title = { Text("Set Custom DNS Server") },
-            text = {
-                Column {
-                    Text("Provide custom hostname or IP address (e.g. 1.1.1.1, 8.8.8.8) or type 'system' to revert.")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = tempDnsVal,
-                        onValueChange = { tempDnsVal = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("system, 8.8.8.8, 1.1.1.1") }
-                    )
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    viewModel.setDefaultDns(tempDnsVal.trim().lowercase())
-                    showDnsDialog = false
-                }) {
-                    Text("Apply")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDnsDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 
     // Open Source Libraries Dialog
     if (showAboutDialog) {

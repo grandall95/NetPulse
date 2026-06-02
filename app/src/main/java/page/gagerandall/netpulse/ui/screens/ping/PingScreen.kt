@@ -58,15 +58,10 @@ fun PingScreen(viewModel: PingViewModel) {
         ) {
             Column {
                 Text(
-                    text = "ICMP Ping Analyzer",
+                    text = "Ping Analyzer",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "Network Studio • Ping Utility",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
