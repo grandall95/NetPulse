@@ -23,10 +23,14 @@ import page.gagerandall.netpulse.ui.components.ResultCard
 import page.gagerandall.netpulse.ui.theme.ColorExcellent
 import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
+import page.gagerandall.netpulse.LocalTvMode
+import page.gagerandall.netpulse.util.tvFocusable
+import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DnsLookupScreen(viewModel: DnsLookupViewModel) {
+    val isTv = LocalTvMode.current
     val state by viewModel.state.collectAsState()
 
     var domainInput by remember { mutableStateOf("google.com") }
@@ -36,8 +40,9 @@ fun DnsLookupScreen(viewModel: DnsLookupViewModel) {
     var useCustomServer by remember { mutableStateOf(false) }
     var customServerInput by remember { mutableStateOf("1.1.1.1") }
 
-    val recordTypes = listOf("A", "AAAA", "MX", "TXT", "CNAME", "NS", "PTR")
     var dropdownExpanded by remember { mutableStateOf(false) }
+
+    val recordTypes = listOf("A", "AAAA", "MX", "CNAME", "TXT", "NS", "SOA", "PTR")
 
     val scrollState = rememberScrollState()
 
@@ -55,12 +60,12 @@ fun DnsLookupScreen(viewModel: DnsLookupViewModel) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -87,6 +92,7 @@ fun DnsLookupScreen(viewModel: DnsLookupViewModel) {
             placeholder = { Text("e.g. google.com") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            readOnly = state.status == "Running",
             trailingIcon = {
                 if (state.status == "Running") {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -103,7 +109,10 @@ fun DnsLookupScreen(viewModel: DnsLookupViewModel) {
                 onValueChange = { },
                 readOnly = true,
                 label = { Text("Record DNS Type") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { dropdownExpanded = true }
+                    .tvFocusable(isTv, focusable = false),
                 trailingIcon = {
                     IconButton(onClick = { dropdownExpanded = true }) {
                         Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Select")
@@ -195,22 +204,28 @@ fun DnsLookupScreen(viewModel: DnsLookupViewModel) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        val isRunning = state.status == "Running"
         Button(
             onClick = {
-                viewModel.lookupDns(
-                    domain = domainInput,
-                    recordTypeStr = selectedType,
-                    useCustomServer = useCustomServer,
-                    customServerIp = customServerInput
-                )
+                if (!isRunning) {
+                    viewModel.lookupDns(
+                        domain = domainInput,
+                        recordTypeStr = selectedType,
+                        useCustomServer = useCustomServer,
+                        customServerIp = customServerInput
+                    )
+                }
             },
-            enabled = state.status != "Running",
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary,
+                contentColor = if (isRunning) MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onPrimary
+            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Run")
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Lookup DNS Records")
+            Text(if (isRunning) "Querying DNS Records..." else "Lookup DNS Records")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -235,7 +250,12 @@ fun DnsLookupScreen(viewModel: DnsLookupViewModel) {
                 statusText = if (state.status == "Running") "Resolving..." else "Complete",
                 statusColor = if (state.status == "Running") ColorGood else ColorExcellent
             ) {
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Response speed", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("${state.responseTimeMs} ms", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge, color = ColorGood)
@@ -270,6 +290,7 @@ fun DnsLookupScreen(viewModel: DnsLookupViewModel) {
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                .tvFocusable(isTv, RoundedCornerShape(8.dp))
                                 .padding(10.dp)
                         ) {
                             Text(
@@ -297,7 +318,7 @@ fun DnsLookupScreen(viewModel: DnsLookupViewModel) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.tvFocusable(isTv, RoundedCornerShape(8.dp))
                     ) {
                         Text(
                             text = state.rawResponse,

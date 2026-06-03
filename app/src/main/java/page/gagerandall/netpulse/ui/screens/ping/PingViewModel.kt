@@ -20,6 +20,10 @@ import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.util.regex.Pattern
 
+/**
+ * ViewModel for the Ping Analyzer tool.
+ * Implements a tiered ping strategy to maximize compatibility across different Android devices.
+ */
 class PingViewModel : ViewModel() {
 
     data class PingResults(
@@ -53,6 +57,12 @@ class PingViewModel : ViewModel() {
         _pingResults.value = PingResults(status = "Failed", rawLogs = listOf("Ping stopped by user."))
     }
 
+    /**
+     * Starts the ping process using a tiered approach:
+     * 1. Tier 1: Unprivileged ICMP datagram sockets (Modern Android approach).
+     * 2. Tier 2: Native 'ping' binary execution (Legacy/Fallback).
+     * 3. Tier 3: Java InetAddress.isReachable (Safe fallback).
+     */
     fun startPing(
         host: String,
         count: Int = 4,
@@ -88,6 +98,9 @@ class PingViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Tier 1: Uses AF_INET, SOCK_DGRAM, IPPROTO_ICMP to send ICMP packets without root.
+     */
     private suspend fun tryIcmpSocketPing(
         host: String,
         count: Int,
@@ -119,8 +132,7 @@ class PingViewModel : ViewModel() {
                 for (i in 1..count) {
                     if (!isActive) break
 
-                    val sequence = i
-                    val requestPacket = constructIcmpEchoRequest(sequence, size)
+                    val requestPacket = constructIcmpEchoRequest(i, size)
                     val startTime = System.currentTimeMillis()
 
                     try {
@@ -142,7 +154,7 @@ class PingViewModel : ViewModel() {
                             if (replyType == 0 && replyCode == 0) {
                                 received++
                                 rtts.add(duration)
-                                logs.add("${bytesReceived} bytes from ${address.hostAddress}: icmp_seq=$replySequence time=${String.format("%.1f", duration)} ms")
+                                logs.add("$bytesReceived bytes from ${address.hostAddress}: icmp_seq=$replySequence time=${String.format("%.1f", duration)} ms")
                             } else {
                                 logs.add("Received non-reply ICMP type=$replyType code=$replyCode from ${address.hostAddress}")
                             }
@@ -151,12 +163,12 @@ class PingViewModel : ViewModel() {
                         }
                     } catch (e: ErrnoException) {
                         if (e.errno == OsConstants.EAGAIN) {
-                            logs.add("Request timeout for icmp_seq=$sequence")
+                            logs.add("Request timeout for icmp_seq=$i")
                         } else {
-                            logs.add("Socket error on seq=$sequence: ${e.message}")
+                            logs.add("Socket error on seq=$i: ${e.message}")
                         }
                     } catch (e: Exception) {
-                        logs.add("Error sending/receiving seq=$sequence: ${e.message}")
+                        logs.add("Error sending/receiving seq=$i: ${e.message}")
                     }
 
                     if (isActive) {

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.net.InetAddress
+import kotlin.time.Duration.Companion.milliseconds
 
 class LatencyGraphViewModel : ViewModel() {
 
@@ -64,7 +65,7 @@ class LatencyGraphViewModel : ViewModel() {
                         currentMs = lat,
                         packetsScanned = _state.value.packetsScanned + 1
                     )
-                    delay(1200) // update frequency
+                    delay(1200.milliseconds) // update frequency
                 }
             }
         } else {

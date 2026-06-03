@@ -27,9 +27,12 @@ import page.gagerandall.netpulse.ui.theme.ColorFailed
 import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
 import java.util.Locale
+import page.gagerandall.netpulse.LocalTvMode
+import page.gagerandall.netpulse.util.tvFocusable
 
 @Composable
 fun TracerouteScreen(viewModel: TracerouteViewModel) {
+    val isTv = LocalTvMode.current
     val results by viewModel.results.collectAsState()
 
     var hostInput by remember { mutableStateOf("google.com") }
@@ -57,12 +60,12 @@ fun TracerouteScreen(viewModel: TracerouteViewModel) {
         )
 
         // General / Advanced Tabs
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -83,6 +86,7 @@ fun TracerouteScreen(viewModel: TracerouteViewModel) {
             placeholder = { Text("e.g. google.com or 8.8.8.8") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            readOnly = results.status == "Running",
             trailingIcon = {
                 if (results.status == "Running") {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -146,25 +150,13 @@ fun TracerouteScreen(viewModel: TracerouteViewModel) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        if (results.status == "Running") {
-            Button(
-                onClick = { viewModel.stopTraceroute() },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "Stop")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Stop Route Trace Scanner")
-            }
-        } else {
-            Button(
-                onClick = {
+        val isRunning = results.status == "Running"
+        Button(
+            onClick = {
+                if (isRunning) {
+                    viewModel.stopTraceroute()
+                } else {
                     val mh = maxHopsInput.toIntOrNull() ?: 30
-                    probesInput.toIntOrNull() ?: 3
                     val tms = timeoutInput.toIntOrNull() ?: 1000
 
                     viewModel.startTraceroute(
@@ -172,14 +164,21 @@ fun TracerouteScreen(viewModel: TracerouteViewModel) {
                         maxHops = if (selectedTab == 0) 30 else mh,
                         timeoutMs = if (selectedTab == 0) 1000 else tms
                     )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Run")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Launch Route Trace Scanner")
-            }
+                }
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                contentColor = if (isRunning) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+            ),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = if (isRunning) Icons.Default.Close else Icons.Default.PlayArrow,
+                contentDescription = if (isRunning) "Stop" else "Run"
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(if (isRunning) "Stop Route Trace Scanner" else "Launch Route Trace Scanner")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -226,6 +225,7 @@ fun TracerouteScreen(viewModel: TracerouteViewModel) {
                             .fillMaxWidth()
                             .padding(vertical = 6.dp)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                            .tvFocusable(isTv, RoundedCornerShape(8.dp))
                             .padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -290,7 +290,7 @@ fun TracerouteScreen(viewModel: TracerouteViewModel) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.tvFocusable(isTv, RoundedCornerShape(8.dp))
                     ) {
                         Column(modifier = Modifier.padding(8.dp)) {
                             Text(

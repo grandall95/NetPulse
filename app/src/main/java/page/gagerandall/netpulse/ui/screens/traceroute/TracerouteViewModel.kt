@@ -282,7 +282,7 @@ class TracerouteViewModel : ViewModel() {
     private suspend fun runFallbackTraceroute(host: String, maxHops: Int, logs: MutableList<String>) {
         withContext(Dispatchers.IO) {
             val hopsList = mutableListOf<TracerouteHop>()
-            var targetIp: String = try {
+            val targetIp: String = try {
                 InetAddress.getByName(host).hostAddress ?: host
             } catch (e: Exception) {
                 host

@@ -23,9 +23,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import page.gagerandall.netpulse.LocalTvMode
 import page.gagerandall.netpulse.ui.components.ResultCard
 import page.gagerandall.netpulse.ui.theme.ColorExcellent
 import page.gagerandall.netpulse.ui.theme.ColorGood
+import page.gagerandall.netpulse.util.tvFocusable
 
 @Composable
 fun IpInfoScreen(viewModel: IpInfoViewModel) {
@@ -36,6 +38,7 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
     var fallbackIpv6Toggle by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
+    val isTv = LocalTvMode.current
 
     Column(
         modifier = Modifier
@@ -51,12 +54,12 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -70,16 +73,24 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
             )
         }
 
-        // Fetch command row
+        // Fetch command row (persistently enabled on TV to keep focus)
+        val isRunning = state.status == "Running"
         Button(
-            onClick = { viewModel.fetchIpDetails(fallbackIpv6Toggle) },
-            enabled = state.status != "Running",
+            onClick = {
+                if (!isRunning) {
+                    viewModel.fetchIpDetails(fallbackIpv6Toggle)
+                }
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary,
+                contentColor = if (isRunning) MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onPrimary
+            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
             Icon(imageVector = Icons.Default.Public, contentDescription = "Query IP")
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Fetch IP Details")
+            Text(if (isRunning) "Fetching IP Details..." else "Fetch IP Details")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -114,7 +125,10 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
             ) {
                 // Public IP with copy action chip
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -143,7 +157,12 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Structured grid
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Country Lease Region", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(state.country, fontWeight = FontWeight.Bold)
@@ -156,7 +175,12 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Internet Service Provider (ISP)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(state.isp, fontWeight = FontWeight.Bold)
@@ -174,7 +198,12 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
                 // Local Private Interfaces Panel
                 Text("Private Adapters & Interfaces", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Local Wi-Fi Adapter (wlan0)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(state.localWifiIp, fontWeight = FontWeight.SemiBold)
@@ -189,7 +218,10 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
                 if ((selectedTab == 1) && (state.status == "Complete")) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .tvFocusable(isTv, RoundedCornerShape(8.dp))
+                            .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -210,7 +242,9 @@ fun IpInfoScreen(viewModel: IpInfoViewModel) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .tvFocusable(isTv, RoundedCornerShape(8.dp))
                     ) {
                         Text(
                             text = state.rawJson,

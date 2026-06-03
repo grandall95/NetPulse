@@ -28,30 +28,35 @@ import page.gagerandall.netpulse.ui.screens.traceroute.TracerouteViewModel
 import page.gagerandall.netpulse.ui.screens.whois.WhoisViewModel
 import page.gagerandall.netpulse.ui.screens.wifi.WifiAnalyzerViewModel
 import page.gagerandall.netpulse.ui.theme.MyApplicationTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import android.app.UiModeManager
+import android.content.res.Configuration
 
+val LocalTvMode = staticCompositionLocalOf { false }
+
+/**
+ * Main entry point for the application.
+ * Handles edge-to-edge display, TV mode detection, and root UI composition.
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Enable edge-to-edge support for modern Android layouts
         enableEdgeToEdge()
+
+        // Detect if the app is running on an Android TV device
+        val uiModeManager = getSystemService(UI_MODE_SERVICE) as? UiModeManager
+        val isTv = uiModeManager?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
 
         // Initialize state stores
         SettingsStore(applicationContext)
 
-        // Initialize ViewModels
-        val pingViewModel = PingViewModel()
-        val tracerouteViewModel = TracerouteViewModel()
-        val speedTestViewModel = SpeedTestViewModel()
-        val dnsLookupViewModel = DnsLookupViewModel()
-        val portScannerViewModel = PortScannerViewModel()
-        val whoisViewModel = WhoisViewModel()
-        val wifiAnalyzerViewModel = WifiAnalyzerViewModel(application)
-        val ipInfoViewModel = IpInfoViewModel()
-        val httpHeaderViewModel = HttpHeaderViewModel()
-        val latencyGraphViewModel = LatencyGraphViewModel()
-        val subnetCalculatorViewModel = SubnetCalculatorViewModel()
+        // Initialize SettingsViewModel (required for theme state at the root level)
         val settingsViewModel = SettingsViewModel(application)
 
         setContent {
+            // Observe theme selection from DataStore
             val themeState by settingsViewModel.themeState.collectAsState()
             val useDarkTheme = when (themeState) {
                 "Dark" -> true
@@ -59,29 +64,22 @@ class MainActivity : ComponentActivity() {
                 else -> isSystemInDarkTheme()
             }
 
-            MyApplicationTheme(darkTheme = useDarkTheme) {
-                val config = LocalConfiguration.current
-                val isLargeScreen = config.screenWidthDp >= 600
+            // Provide TV mode status to the entire UI tree via CompositionLocal
+            CompositionLocalProvider(LocalTvMode provides isTv) {
+                MyApplicationTheme(darkTheme = useDarkTheme) {
+                    val config = LocalConfiguration.current
+                    val isLargeScreen = config.screenWidthDp >= 600
 
-                Scaffold(
-                    modifier = Modifier.fillMaxSize()
-                ) { innerPadding ->
-                    Box(modifier = Modifier.padding(innerPadding)) {
-                        AppNavigation(
-                            pingViewModel = pingViewModel,
-                            tracerouteViewModel = tracerouteViewModel,
-                            speedTestViewModel = speedTestViewModel,
-                            dnsLookupViewModel = dnsLookupViewModel,
-                            portScannerViewModel = portScannerViewModel,
-                            whoisViewModel = whoisViewModel,
-                            wifiAnalyzerViewModel = wifiAnalyzerViewModel,
-                            ipInfoViewModel = ipInfoViewModel,
-                            httpHeaderViewModel = httpHeaderViewModel,
-                            latencyGraphViewModel = latencyGraphViewModel,
-                            subnetCalculatorViewModel = subnetCalculatorViewModel,
-                            settingsViewModel = settingsViewModel,
-                            isLargeScreen = isLargeScreen
-                        )
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                    ) { innerPadding ->
+                        Box(modifier = Modifier.padding(innerPadding)) {
+                            // Main navigation host
+                            AppNavigation(
+                                settingsViewModel = settingsViewModel,
+                                isLargeScreen = isLargeScreen
+                            )
+                        }
                     }
                 }
             }

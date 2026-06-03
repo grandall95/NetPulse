@@ -21,8 +21,12 @@ import page.gagerandall.netpulse.ui.theme.ColorFailed
 import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
 
+import page.gagerandall.netpulse.LocalTvMode
+import page.gagerandall.netpulse.util.tvFocusable
+
 @Composable
 fun LatencyGraphScreen(viewModel: LatencyGraphViewModel) {
+    val isTv = LocalTvMode.current
     val state by viewModel.state.collectAsState()
     var hostInput by remember { mutableStateOf("8.8.8.8") }
 
@@ -46,7 +50,7 @@ fun LatencyGraphScreen(viewModel: LatencyGraphViewModel) {
             placeholder = { Text("e.g. 8.8.8.8") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            enabled = !state.activeTracking
+            readOnly = state.activeTracking
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -87,7 +91,10 @@ fun LatencyGraphScreen(viewModel: LatencyGraphViewModel) {
                 statusColor = col
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -125,7 +132,8 @@ fun LatencyGraphScreen(viewModel: LatencyGraphViewModel) {
                     dataPoints = state.historyPoints,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp),
+                        .height(180.dp)
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp)),
                     enableZoom = true
                 )
             }

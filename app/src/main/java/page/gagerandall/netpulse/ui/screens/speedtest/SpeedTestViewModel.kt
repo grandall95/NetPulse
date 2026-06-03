@@ -7,17 +7,22 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
 import okio.BufferedSink
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * ViewModel for the Speed Test tool.
+ * Orchestrates latency checks, multi-connection downloads, and uploads to measure bandwidth.
+ */
 class SpeedTestViewModel : ViewModel() {
 
     data class SpeedTestState(
@@ -33,7 +38,7 @@ class SpeedTestViewModel : ViewModel() {
         val bytesDownloaded: Long = 0,
         val bytesUploaded: Long = 0,
         val durationSec: Float = 0f,
-        val errorMessage: String? = null
+        val errorMessage: String? = null,
     )
 
     private val _state = MutableStateFlow(SpeedTestState())
@@ -95,7 +100,7 @@ class SpeedTestViewModel : ViewModel() {
         okHttpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("Failed check: $response")
             val duration = (System.currentTimeMillis() - startTime).toFloat()
-            val text = response.body?.string() ?: ""
+            val text = response.body.string()
 
             var location = "US"
             var ipAddress = "0.0.0.0"
@@ -113,6 +118,9 @@ class SpeedTestViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Executes parallel download streams to saturate the link and measure bandwidth.
+     */
     private suspend fun measureDownload() {
         val parallelConnections = 3
         val downloadSizePerConnection = 25_000_000L // 25MB per connection
@@ -129,7 +137,7 @@ class SpeedTestViewModel : ViewModel() {
                 var lastTime = System.nanoTime()
                 
                 while (!isFinished.get()) {
-                    delay(200L)
+                    delay(200L.milliseconds)
                     val currentBytes = totalBytesDownloaded.get()
                     val currentTime = System.nanoTime()
                     val elapsedSec = (currentTime - lastTime) / 1_000_000_000f
@@ -185,7 +193,7 @@ class SpeedTestViewModel : ViewModel() {
                 }
             }
 
-            downloadJobs.forEach { it.join() }
+            downloadJobs.joinAll()
             isFinished.set(true)
             samplingJob.join()
         }
@@ -206,6 +214,9 @@ class SpeedTestViewModel : ViewModel() {
         )
     }
 
+    /**
+     * Executes parallel upload streams using custom CountingRequestBody to track progress.
+     */
     private suspend fun measureUpload() {
         val parallelConnections = 3
         val uploadSizePerConnection = 15_000_000L // 15MB per connection
@@ -222,7 +233,7 @@ class SpeedTestViewModel : ViewModel() {
                 var lastTime = System.nanoTime()
                 
                 while (!stopUpload.get()) {
-                    delay(200L)
+                    delay(200L.milliseconds)
                     val currentBytes = totalBytesUploaded.get()
                     val currentTime = System.nanoTime()
                     val elapsedSec = (currentTime - lastTime) / 1_000_000_000f
@@ -265,7 +276,7 @@ class SpeedTestViewModel : ViewModel() {
                                     stopUpload.set(true)
                                 }
                                 stop
-                            }
+                            },
                         )
 
                         val request = Request.Builder()
@@ -282,7 +293,7 @@ class SpeedTestViewModel : ViewModel() {
                 }
             }
 
-            uploadJobs.forEach { it.join() }
+            uploadJobs.joinAll()
             stopUpload.set(true)
             samplingJob.join()
         }

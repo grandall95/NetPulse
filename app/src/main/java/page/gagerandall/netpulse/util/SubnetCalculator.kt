@@ -4,6 +4,10 @@ import java.math.BigInteger
 import java.net.InetAddress
 import kotlin.math.pow
 
+/**
+ * Low-level utility for IP address math and CIDR subnet calculation.
+ * Supports both IPv4 and IPv6 using BigInteger for precision.
+ */
 object SubnetCalculator {
 
     data class SubnetDetails(
@@ -18,6 +22,9 @@ object SubnetCalculator {
         val isIpv6: Boolean
     )
 
+    /**
+     * Determines whether to use IPv4 or IPv6 calculation logic based on the input string.
+     */
     fun calculate(ipInput: String, prefixLength: Int): SubnetDetails {
         val addressStr = ipInput.trim()
         val isV6 = addressStr.contains(":")
@@ -87,6 +94,9 @@ object SubnetCalculator {
         )
     }
 
+    /**
+     * Divides an IPv4 network into smaller sub-blocks based on the requested count.
+     */
     fun splitSubnetIpv4(ip: String, cidr: Int, subnetsCount: Int): List<Pair<String, Int>> {
         val ipv4Int = ipToLong(ip)
         val mask = if (cidr == 0) 0L else (0xFFFFFFFFL shl (32 - cidr)) and 0xFFFFFFFFL

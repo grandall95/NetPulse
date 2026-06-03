@@ -19,8 +19,15 @@ import page.gagerandall.netpulse.ui.components.ResultCard
 import page.gagerandall.netpulse.ui.theme.ColorExcellent
 import page.gagerandall.netpulse.ui.theme.ColorGood
 
+import page.gagerandall.netpulse.LocalTvMode
+import page.gagerandall.netpulse.util.tvFocusable
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalFocusManager
+
 @Composable
 fun SubnetCalculatorScreen(viewModel: SubnetCalculatorViewModel) {
+    val isTv = LocalTvMode.current
     val state by viewModel.state.collectAsState()
 
     var ipInput by remember { mutableStateOf("192.168.1.1") }
@@ -32,6 +39,7 @@ fun SubnetCalculatorScreen(viewModel: SubnetCalculatorViewModel) {
     var splitCountInput by remember { mutableFloatStateOf(4f) }
 
     val scrollState = rememberScrollState()
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = Modifier
@@ -47,12 +55,12 @@ fun SubnetCalculatorScreen(viewModel: SubnetCalculatorViewModel) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -97,7 +105,24 @@ fun SubnetCalculatorScreen(viewModel: SubnetCalculatorViewModel) {
                 viewModel.recalculateSubnet(ipInput, it.toInt(), splitCountInput.toInt())
             },
             valueRange = 0f..maxCidr,
-            steps = maxCidr.toInt() - 1
+            steps = maxCidr.toInt() - 1,
+            modifier = Modifier.onPreviewKeyEvent { keyEvent ->
+                if (isTv && keyEvent.type == KeyEventType.KeyDown) {
+                    when (keyEvent.key) {
+                        Key.DirectionUp -> {
+                            focusManager.moveFocus(FocusDirection.Up)
+                            true
+                        }
+                        Key.DirectionDown -> {
+                            focusManager.moveFocus(FocusDirection.Down)
+                            true
+                        }
+                        else -> false
+                    }
+                } else {
+                    false
+                }
+            }
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -116,7 +141,12 @@ fun SubnetCalculatorScreen(viewModel: SubnetCalculatorViewModel) {
                 statusText = if (details.isIpv6) "IPv6 Address" else "IPv4 Address",
                 statusColor = if (details.isIpv6) ColorGood else ColorExcellent
             ) {
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Network Base Address", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(details.networkAddress, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
@@ -131,7 +161,12 @@ fun SubnetCalculatorScreen(viewModel: SubnetCalculatorViewModel) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("First Usable Host", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(details.firstUsable, fontWeight = FontWeight.Bold)
@@ -144,7 +179,12 @@ fun SubnetCalculatorScreen(viewModel: SubnetCalculatorViewModel) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Subnet Mask IP", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(details.subnetMask, fontWeight = FontWeight.Bold)
@@ -158,7 +198,12 @@ fun SubnetCalculatorScreen(viewModel: SubnetCalculatorViewModel) {
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Column {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Text("Total Usable Hosts", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         text = if (details.isIpv6) "3.4 × 10³⁸ total spaces" else details.totalUsable,
@@ -195,7 +240,24 @@ fun SubnetCalculatorScreen(viewModel: SubnetCalculatorViewModel) {
                                 viewModel.recalculateSubnet(ipInput, cidrInput.toInt(), it.toInt())
                             },
                             valueRange = 2f..16f,
-                            steps = 6
+                            steps = 6,
+                            modifier = Modifier.onPreviewKeyEvent { keyEvent ->
+                                if (isTv && keyEvent.type == KeyEventType.KeyDown) {
+                                    when (keyEvent.key) {
+                                        Key.DirectionUp -> {
+                                            focusManager.moveFocus(FocusDirection.Up)
+                                            true
+                                        }
+                                        Key.DirectionDown -> {
+                                            focusManager.moveFocus(FocusDirection.Down)
+                                            true
+                                        }
+                                        else -> false
+                                    }
+                                } else {
+                                    false
+                                }
+                            }
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -205,6 +267,7 @@ fun SubnetCalculatorScreen(viewModel: SubnetCalculatorViewModel) {
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                    .tvFocusable(isTv, RoundedCornerShape(6.dp))
                                     .padding(8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {

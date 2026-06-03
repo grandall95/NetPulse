@@ -14,7 +14,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * ViewModel for the Wi-Fi Analyzer tool.
+ * Handles Wi-Fi network scanning, current connection monitoring, and auto-refresh logic.
+ */
 class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(application) {
 
     private val wifiManager = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
@@ -25,7 +30,7 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
         val signalDbm: Int,
         val frequencyMhz: Int,
         val channel: Int,
-        val securityType: String
+        val securityType: String,
     )
 
     data class WifiState(
@@ -57,13 +62,16 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    /**
+     * Periodically triggers a scan of nearby Wi-Fi networks.
+     */
     fun toggleAutoRefresh(enabled: Boolean) {
         _state.value = _state.value.copy(isAutoRefresh = enabled)
         if (enabled) {
             autoRefreshJob = viewModelScope.launch {
-                while (true) {
+                while (state.value.isAutoRefresh) {
                     refreshScanner()
-                    delay(5000)
+                    delay(5000.milliseconds)
                 }
             }
         } else {
@@ -131,7 +139,7 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
                 results.forEach { scan ->
                     list.add(
                         WifiNetwork(
-                            ssid = scan.SSID ?: "Hidden IoT Node",
+                            ssid = getScanResultSsid(scan),
                             bssid = scan.BSSID ?: "00:00:00:00:00:00",
                             signalDbm = scan.level,
                             frequencyMhz = scan.frequency,
@@ -164,6 +172,18 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
         )
     }
 
+    private fun getScanResultSsid(scan: ScanResult): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            scan.wifiSsid?.toString()?.removePrefix("\"")?.removeSuffix("\"") ?: "Hidden IoT Node"
+        } else {
+            @Suppress("DEPRECATION")
+            scan.SSID ?: "Hidden IoT Node"
+        }
+    }
+
+    /**
+     * Maps Wi-Fi frequency (MHz) to its corresponding 2.4GHz or 5GHz channel number.
+     */
     private fun convertFrequencyToChannel(freqMhz: Int): Int {
         return when {
             freqMhz == 2484 -> 14

@@ -16,8 +16,8 @@ android {
     applicationId = "page.gagerandall.netpulse"
     minSdk = 29
     targetSdk = 37
-    versionCode = 3
-    versionName = "1.0.2"
+    versionCode = 4
+    versionName = "1.0.3"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -115,6 +115,10 @@ dependencies {
   
   // Custom DNS resolver support
   implementation(libs.dnsjava)
+  
+  // Compose for TV Support
+  implementation(libs.androidx.tv.foundation)
+  implementation(libs.androidx.tv.material)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

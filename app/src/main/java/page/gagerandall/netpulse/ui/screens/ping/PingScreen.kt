@@ -28,15 +28,20 @@ import page.gagerandall.netpulse.ui.theme.ColorFailed
 import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
 import java.util.Locale
+import page.gagerandall.netpulse.LocalTvMode
+import page.gagerandall.netpulse.util.tvFocusable
 
 @Composable
 fun PingScreen(viewModel: PingViewModel) {
+    val isTv = LocalTvMode.current
+    // Observe ping results from the ViewModel
     val results by viewModel.pingResults.collectAsState()
 
+    // Local UI state for domain/IP input
     var hostInput by remember { mutableStateOf("google.com") }
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Simple, 1: Advanced
 
-    // Advanced parameters
+    // Advanced parameters state
     var packetCountInput by remember { mutableStateOf("4") }
     var packetSizeInput by remember { mutableStateOf("56") }
     var ttlInput by remember { mutableStateOf("64") }
@@ -67,12 +72,12 @@ fun PingScreen(viewModel: PingViewModel) {
         }
 
         // Navigation tab choices (Simple vs Advanced)
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -94,6 +99,7 @@ fun PingScreen(viewModel: PingViewModel) {
             placeholder = { Text("e.g. google.com or 1.1.1.1") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            readOnly = results.status == "Running",
             shape = RoundedCornerShape(18.dp),
             trailingIcon = {
                 if (results.status == "Running") {
@@ -122,7 +128,8 @@ fun PingScreen(viewModel: PingViewModel) {
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        OutlinedTextField(
+                        // Input Controls Section
+        OutlinedTextField(
                             value = packetCountInput,
                             onValueChange = { packetCountInput = it },
                             label = { Text("Count") },
@@ -133,7 +140,8 @@ fun PingScreen(viewModel: PingViewModel) {
                                 .padding(end = 4.dp),
                             singleLine = true
                         )
-                        OutlinedTextField(
+                        // Input Controls Section
+        OutlinedTextField(
                             value = packetSizeInput,
                             onValueChange = { packetSizeInput = it },
                             label = { Text("Size (B)") },
@@ -147,7 +155,8 @@ fun PingScreen(viewModel: PingViewModel) {
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        OutlinedTextField(
+                        // Input Controls Section
+        OutlinedTextField(
                             value = ttlInput,
                             onValueChange = { ttlInput = it },
                             label = { Text("TTL") },
@@ -158,7 +167,8 @@ fun PingScreen(viewModel: PingViewModel) {
                                 .padding(end = 4.dp),
                             singleLine = true
                         )
-                        OutlinedTextField(
+                        // Input Controls Section
+        OutlinedTextField(
                             value = timeoutInput,
                             onValueChange = { timeoutInput = it },
                             label = { Text("Timeout (s)") },
@@ -177,23 +187,12 @@ fun PingScreen(viewModel: PingViewModel) {
         Spacer(modifier = Modifier.height(10.dp))
 
         // Start/Stop Operation Button
-        if (results.status == "Running") {
-            Button(
-                onClick = { viewModel.stopPing() },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "Stop")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Stop Diagnostic Ping Test")
-            }
-        } else {
-            Button(
-                onClick = {
+        val isRunning = results.status == "Running"
+        Button(
+            onClick = {
+                if (isRunning) {
+                    viewModel.stopPing()
+                } else {
                     val cnt = packetCountInput.toIntOrNull() ?: 4
                     val sz = packetSizeInput.toIntOrNull() ?: 56
                     val timeout = timeoutInput.toIntOrNull() ?: 2
@@ -206,14 +205,21 @@ fun PingScreen(viewModel: PingViewModel) {
                         timeoutSec = if (selectedTab == 0) 2 else timeout,
                         ttl = if (selectedTab == 0) 64 else ttlValue
                     )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp)
-            ) {
-                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Run")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Launch Diagnostic Ping Test")
-            }
+                }
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                contentColor = if (isRunning) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+            ),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Icon(
+                imageVector = if (isRunning) Icons.Default.Close else Icons.Default.PlayArrow,
+                contentDescription = if (isRunning) "Run" else "Stop"
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(if (isRunning) "Stop Diagnostic Ping Test" else "Launch Diagnostic Ping Test")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -243,6 +249,7 @@ fun PingScreen(viewModel: PingViewModel) {
         }
 
         // Live stats visual elements
+        // Analysis Results Section
         if (results.status != "Idle") {
             val average = results.avgRtt
             val (statusText, statusCol) = when {
@@ -260,7 +267,12 @@ fun PingScreen(viewModel: PingViewModel) {
                 statusColor = statusCol
             ) {
                 // Key values columns
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Latency Range", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
@@ -280,7 +292,12 @@ fun PingScreen(viewModel: PingViewModel) {
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Packet Loss Status", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
@@ -303,7 +320,11 @@ fun PingScreen(viewModel: PingViewModel) {
                 // Render Canvas Sparkline graph
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Dynamic Latency Trend", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
-                LatencyChart(dataPoints = results.individualRtts, enableZoom = selectedTab == 1)
+                LatencyChart(
+                    dataPoints = results.individualRtts,
+                    enableZoom = selectedTab == 1,
+                    modifier = Modifier.tvFocusable(isTv, RoundedCornerShape(12.dp))
+                )
 
                 // Advanced detailed output list
                 if (selectedTab == 1) {
@@ -315,6 +336,7 @@ fun PingScreen(viewModel: PingViewModel) {
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp, horizontal = 4.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                .tvFocusable(isTv, RoundedCornerShape(6.dp))
                                 .padding(8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -328,7 +350,8 @@ fun PingScreen(viewModel: PingViewModel) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.tvFocusable(isTv, RoundedCornerShape(8.dp))
                     ) {
                         Column(
                             modifier = Modifier

@@ -24,8 +24,12 @@ import page.gagerandall.netpulse.ui.theme.ColorExcellent
 import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
 
+import page.gagerandall.netpulse.LocalTvMode
+import page.gagerandall.netpulse.util.tvFocusable
+
 @Composable
 fun PortScannerScreen(viewModel: PortScannerViewModel) {
+    val isTv = LocalTvMode.current
     val state by viewModel.state.collectAsState()
 
     var hostInput by remember { mutableStateOf("127.0.0.1") }
@@ -62,12 +66,12 @@ fun PortScannerScreen(viewModel: PortScannerViewModel) {
         )
 
         // Tab selection
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -89,6 +93,7 @@ fun PortScannerScreen(viewModel: PortScannerViewModel) {
             placeholder = { Text("e.g. 192.168.1.1 or localhost") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            readOnly = state.status == "Running",
             trailingIcon = {
                 if (state.status == "Running") {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -134,7 +139,8 @@ fun PortScannerScreen(viewModel: PortScannerViewModel) {
                         onValueChange = { customPortsInput = it },
                         label = { Text("Custom Port Range (comma-separated or dash e.g. 1-100)") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        readOnly = state.status == "Running"
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(modifier = Modifier.fillMaxWidth()) {
@@ -146,7 +152,8 @@ fun PortScannerScreen(viewModel: PortScannerViewModel) {
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(end = 4.dp),
-                            singleLine = true
+                            singleLine = true,
+                            readOnly = state.status == "Running"
                         )
                         OutlinedTextField(
                             value = timeoutInput,
@@ -156,7 +163,8 @@ fun PortScannerScreen(viewModel: PortScannerViewModel) {
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(horizontal = 4.dp),
-                            singleLine = true
+                            singleLine = true,
+                            readOnly = state.status == "Running"
                         )
                     }
                 }
@@ -196,23 +204,12 @@ fun PortScannerScreen(viewModel: PortScannerViewModel) {
             }
         }
 
-        if (state.status == "Running") {
-            Button(
-                onClick = { viewModel.stopScan() },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "Stop")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Stop Port Security Review")
-            }
-        } else {
-            Button(
-                onClick = {
+        val isRunning = state.status == "Running"
+        Button(
+            onClick = {
+                if (isRunning) {
+                    viewModel.stopScan()
+                } else {
                     val ports = if (selectedTab == 0) {
                         when (selectedPreset) {
                             "Common" -> commonPorts
@@ -235,14 +232,21 @@ fun PortScannerScreen(viewModel: PortScannerViewModel) {
                         timeoutMs = timeout,
                         concurrencyLimit = limit
                     )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Run")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Execute Authorized Port Security Review")
-            }
+                }
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                contentColor = if (isRunning) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+            ),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = if (isRunning) Icons.Default.Close else Icons.Default.PlayArrow,
+                contentDescription = if (isRunning) "Stop" else "Run"
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(if (isRunning) "Stop Port Security Review" else "Execute Authorized Port Security Review")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -285,7 +289,12 @@ fun PortScannerScreen(viewModel: PortScannerViewModel) {
                 statusText = if (state.status == "Running") "Scanning..." else "Complete",
                 statusColor = if (state.status == "Running") ColorGood else ColorExcellent
             ) {
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Active query duration", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("${state.elapsedMs} ms", fontWeight = FontWeight.Bold)
@@ -310,6 +319,7 @@ fun PortScannerScreen(viewModel: PortScannerViewModel) {
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                .tvFocusable(isTv, RoundedCornerShape(6.dp))
                                 .padding(10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically

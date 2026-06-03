@@ -39,8 +39,12 @@ robolectric = "4.16.1"
 roborazzi = "1.63.0"
 firebaseBom = "34.14.0"
 secretsGradlePlugin = "2.0.1"
+tvFoundation = "1.0.0"
+tvMaterial = "1.1.0"
 
 [libraries]
+androidx-tv-foundation = { group = "androidx.tv", name = "tv-foundation", version.ref = "tvFoundation" }
+androidx-tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "tvMaterial" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 dnsjava = { module = "dnsjava:dnsjava", version.ref = "dnsjava" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

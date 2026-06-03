@@ -25,8 +25,12 @@ import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
 import java.util.Locale
 
+import page.gagerandall.netpulse.LocalTvMode
+import page.gagerandall.netpulse.util.tvFocusable
+
 @Composable
 fun SpeedTestScreen(viewModel: SpeedTestViewModel) {
+    val isTv = LocalTvMode.current
     val state by viewModel.state.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Simple, 1: Advanced
 
@@ -46,12 +50,12 @@ fun SpeedTestScreen(viewModel: SpeedTestViewModel) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 20.dp)
+                .padding(bottom = 20.dp),
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -66,15 +70,23 @@ fun SpeedTestScreen(viewModel: SpeedTestViewModel) {
         }
 
         // Action launch button
+        val isRunning = (state.status == "Measuring Latency...") || (state.status == "Downloading...") || (state.status == "Uploading...")
         Button(
-            onClick = { viewModel.runSpeedTest() },
-            enabled = (state.status != "Measuring Latency...") && (state.status != "Downloading...") && (state.status != "Uploading..."),
+            onClick = {
+                if (!isRunning) {
+                    viewModel.runSpeedTest()
+                }
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary,
+                contentColor = if (isRunning) MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onPrimary
+            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
             Icon(imageVector = Icons.Default.Speed, contentDescription = "Run Test")
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Run Speed Test")
+            Text(if (isRunning) "Running Speed Test..." else "Run Speed Test")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -128,32 +140,39 @@ fun SpeedTestScreen(viewModel: SpeedTestViewModel) {
                 statusColor = if (state.status == "Complete") ColorExcellent else ColorGood
             ) {
                 // Latency and location core fields
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location", tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Server PoP: ${state.serverLocation} (Colo IP: ${state.ipAddress})",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Exchange Latency RTT", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location", tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "${state.latencyMs.toInt()} ms",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (state.latencyMs < 50f) ColorExcellent else if (state.latencyMs < 150f) ColorGood else ColorPoor
+                            text = "Server PoP: ${state.serverLocation} (Colo IP: ${state.ipAddress})",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Active Interface", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Cloudflare Edge", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Exchange Latency RTT", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = "${state.latencyMs.toInt()} ms",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (state.latencyMs < 50f) ColorExcellent else if (state.latencyMs < 150f) ColorGood else ColorPoor
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Active Interface", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Cloudflare Edge", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
 
@@ -162,97 +181,118 @@ fun SpeedTestScreen(viewModel: SpeedTestViewModel) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Download section
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.CloudDownload, contentDescription = "Download", tint = ColorExcellent)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Download Speed", fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = String.format(Locale.US, "%.2f", state.downloadMbps),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = ColorExcellent
-                    )
-                    Text(" Mbps", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
-                }
-                LinearProgressIndicator(
-                    progress = { state.downloadProgress },
-                    color = ColorExcellent,
-                    trackColor = ColorExcellent.copy(alpha = 0.2f),
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp)
-                        .background(Color.Transparent, RoundedCornerShape(3.dp))
-                )
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.CloudDownload, contentDescription = "Download", tint = ColorExcellent)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Download Speed", fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = String.format(Locale.US, "%.2f", state.downloadMbps),
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ColorExcellent
+                        )
+                        Text(" Mbps", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
+                    }
+                    LinearProgressIndicator(
+                        progress = { state.downloadProgress },
+                        color = ColorExcellent,
+                        trackColor = ColorExcellent.copy(alpha = 0.2f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .background(Color.Transparent, RoundedCornerShape(3.dp))
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Upload section
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.CloudUpload, contentDescription = "Upload", tint = ColorGood)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Upload Speed", fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = String.format(Locale.US, "%.2f", state.uploadMbps),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = ColorGood
-                    )
-                    Text(" Mbps", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
-                }
-                LinearProgressIndicator(
-                    progress = { state.uploadProgress },
-                    color = ColorGood,
-                    trackColor = ColorGood.copy(alpha = 0.2f),
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp)
-                        .background(Color.Transparent, RoundedCornerShape(3.dp))
-                )
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.CloudUpload, contentDescription = "Upload", tint = ColorGood)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Upload Speed", fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = String.format(Locale.US, "%.2f", state.uploadMbps),
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ColorGood
+                        )
+                        Text(" Mbps", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
+                    }
+                    LinearProgressIndicator(
+                        progress = { state.uploadProgress },
+                        color = ColorGood,
+                        trackColor = ColorGood.copy(alpha = 0.2f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .background(Color.Transparent, RoundedCornerShape(3.dp))
+                    )
+                }
 
                 // Advanced metrics listing
                 if (selectedTab == 1) {
                     Spacer(modifier = Modifier.height(24.dp))
-                    Text("Telemetry Specifications", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                            .padding(8.dp)
                     ) {
-                        Text("Bytes Transferred (Down)")
-                        Text("${String.format("%.2f", state.bytesDownloaded / 1_000_000f)} MB", fontWeight = FontWeight.SemiBold)
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Bytes Transferred (Up)")
-                        Text("${String.format("%.2f", state.bytesUploaded / 1_000_000f)} MB", fontWeight = FontWeight.SemiBold)
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Test Sequence Duration")
-                        Text("${String.format("%.1f", state.durationSec)}s", fontWeight = FontWeight.SemiBold)
+                        Text("Telemetry Specifications", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Bytes Transferred (Down)")
+                            Text("${String.format("%.2f", state.bytesDownloaded / 1_000_000f)} MB", fontWeight = FontWeight.SemiBold)
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Bytes Transferred (Up)")
+                            Text("${String.format("%.2f", state.bytesUploaded / 1_000_000f)} MB", fontWeight = FontWeight.SemiBold)
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Test Sequence Duration")
+                            Text("${String.format("%.1f", state.durationSec)}s", fontWeight = FontWeight.SemiBold)
+                        }
                     }
 
                     // Dynamically render speeds graph
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Flow Chart Throughput (Real-Time Sparkline)", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 6.dp))
-                    LatencyChart(dataPoints = state.realTimeSpeeds, modifier = Modifier.fillMaxWidth(), enableZoom = true)
+                    LatencyChart(dataPoints = state.realTimeSpeeds, modifier = Modifier.fillMaxWidth().tvFocusable(isTv, RoundedCornerShape(12.dp)), enableZoom = true)
                 }
             }
         }

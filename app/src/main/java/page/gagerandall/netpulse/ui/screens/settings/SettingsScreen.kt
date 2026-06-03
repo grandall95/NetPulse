@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import page.gagerandall.netpulse.BuildConfig
+import page.gagerandall.netpulse.LocalTvMode
+import page.gagerandall.netpulse.util.tvFocusable
 
 @Composable
 fun SettingsScreen(
@@ -29,6 +31,7 @@ fun SettingsScreen(
 
     val uriHandler = LocalUriHandler.current
     val scrollState = rememberScrollState()
+    val isTv = LocalTvMode.current
 
     Column(
         modifier = Modifier
@@ -82,7 +85,9 @@ fun SettingsScreen(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                             ),
-                            modifier = Modifier.padding(horizontal = 4.dp)
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp)
+                                .tvFocusable(isTv, RoundedCornerShape(8.dp), focusable = false)
                         )
                     }
                 }
@@ -92,13 +97,16 @@ fun SettingsScreen(
 
 
         // About / Open Source Licenses
+        // - Resolved a double-focus / double-click bug on the settings screen by introducing a `focusable: Boolean = true` parameter to our custom `tvFocusable` modifier. For components that are already clickable or focusable (such as `FilterChip` and `Card` layouts with `.clickable`), passing `focusable = false` avoids nesting multiple focus nodes while keeping the premium hover border/scaling design effect.
+        // - Enabled remote-friendly D-pad scrolling inside the Open Source Credits dialog by wrapping individual library items inside focusable `Column` blocks (using `.tvFocusable(isTv, ...)`), allowing the remote focus hierarchy to smoothly bring intermediate items into view while navigating down.
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 12.dp)
-                .clickable { showAboutDialog = true },
+                .clickable { showAboutDialog = true }
+                .tvFocusable(isTv, RoundedCornerShape(16.dp), focusable = false),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Row(
@@ -156,24 +164,34 @@ fun SettingsScreen(
                     )
 
                     // DnsJava
-                    Text("DnsJava (Version 3.6.5)", fontWeight = FontWeight.Bold)
-                    Text("High performance, custom DNS packet resolver & parser.\nLicense: BSD 3-Clause\n", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(modifier = Modifier.fillMaxWidth().tvFocusable(isTv, RoundedCornerShape(6.dp)).padding(4.dp)) {
+                        Text("DnsJava (Version 3.6.5)", fontWeight = FontWeight.Bold)
+                        Text("High performance, custom DNS packet resolver & parser.\nLicense: BSD 3-Clause", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
 
                     // OkHttp
-                    Text("Square OkHttp (Version 4.12.0)", fontWeight = FontWeight.Bold)
-                    Text("Advanced connection pooling, header inspection, and automated TLS/SSL client APIs.\nLicense: Apache 2.0\n", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(modifier = Modifier.fillMaxWidth().tvFocusable(isTv, RoundedCornerShape(6.dp)).padding(4.dp)) {
+                        Text("Square OkHttp (Version 4.12.0)", fontWeight = FontWeight.Bold)
+                        Text("Advanced connection pooling, header inspection, and automated TLS/SSL client APIs.\nLicense: Apache 2.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
 
                     // Accompanist Permissions
-                    Text("Google Accompanist Permissions (Version 0.37.0)", fontWeight = FontWeight.Bold)
-                    Text("Idiomatic Jetpack Compose runtime permission workflows.\nLicense: Apache 2.0\n", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(modifier = Modifier.fillMaxWidth().tvFocusable(isTv, RoundedCornerShape(6.dp)).padding(4.dp)) {
+                        Text("Google Accompanist Permissions (Version 0.37.0)", fontWeight = FontWeight.Bold)
+                        Text("Idiomatic Jetpack Compose runtime permission workflows.\nLicense: Apache 2.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
 
                     // Datastore
-                    Text("Androidx Jetpack DataStore (Version 1.1.3)", fontWeight = FontWeight.Bold)
-                    Text("Type-safe, persistent local preferences backed by Kotlin coroutines.\nLicense: Apache 2.0\n", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(modifier = Modifier.fillMaxWidth().tvFocusable(isTv, RoundedCornerShape(6.dp)).padding(4.dp)) {
+                        Text("Androidx Jetpack DataStore (Version 1.1.3)", fontWeight = FontWeight.Bold)
+                        Text("Type-safe, persistent local preferences backed by Kotlin coroutines.\nLicense: Apache 2.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
 
                     // Jetpack Compose
-                    Text("Jetpack Compose Material 3", fontWeight = FontWeight.Bold)
-                    Text("Declarative, interactive UI layouts built with Google's M3 specifications.\nLicense: Apache 2.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(modifier = Modifier.fillMaxWidth().tvFocusable(isTv, RoundedCornerShape(6.dp)).padding(4.dp)) {
+                        Text("Jetpack Compose Material 3", fontWeight = FontWeight.Bold)
+                        Text("Declarative, interactive UI layouts built with Google's M3 specifications.\nLicense: Apache 2.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -183,6 +201,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier
                             .clickable { uriHandler.openUri("https://www.gagerandall.page/contact") }
+                            .tvFocusable(isTv, RoundedCornerShape(4.dp), focusable = false)
                             .padding(vertical = 4.dp)
                     )
 
@@ -192,6 +211,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier
                             .clickable { uriHandler.openUri("https://opensource.org/license/GPL-3.0") }
+                            .tvFocusable(isTv, RoundedCornerShape(4.dp), focusable = false)
                             .padding(vertical = 4.dp)
                     )
                 }

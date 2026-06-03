@@ -34,9 +34,13 @@ import page.gagerandall.netpulse.ui.theme.ColorFailed
 import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
 
+import page.gagerandall.netpulse.LocalTvMode
+import page.gagerandall.netpulse.util.tvFocusable
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiAnalyzerScreen(viewModel: WifiAnalyzerViewModel) {
+    val isTv = LocalTvMode.current
     val state by viewModel.state.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Simple, 1: Advanced
 
@@ -76,12 +80,12 @@ fun WifiAnalyzerScreen(viewModel: WifiAnalyzerViewModel) {
         }
 
         // General / Advanced Tab Selector
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -140,14 +144,22 @@ fun WifiAnalyzerScreen(viewModel: WifiAnalyzerViewModel) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            val isScanning = state.status == "Scanning..."
             Button(
-                onClick = { viewModel.refreshScanner() },
-                enabled = state.status != "Scanning...",
+                onClick = {
+                    if (!isScanning) {
+                        viewModel.refreshScanner()
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isScanning) MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary,
+                    contentColor = if (isScanning) MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onPrimary
+                ),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Icon(imageVector = Icons.Default.Refresh, contentDescription = "Scan")
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Refresh")
+                Text(if (isScanning) "Scanning..." else "Refresh")
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -175,7 +187,13 @@ fun WifiAnalyzerScreen(viewModel: WifiAnalyzerViewModel) {
                 statusText = qualText,
                 statusColor = qualCol
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
                         imageVector = Icons.Default.Wifi,
                         contentDescription = "Wi-Fi Strength",
@@ -192,7 +210,12 @@ fun WifiAnalyzerScreen(viewModel: WifiAnalyzerViewModel) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Signal Strength", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("$rssi dBm", fontWeight = FontWeight.Bold, color = qualCol)
@@ -204,7 +227,12 @@ fun WifiAnalyzerScreen(viewModel: WifiAnalyzerViewModel) {
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Frequency Channel", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("Ch ${state.currentChannel}", fontWeight = FontWeight.Bold)
@@ -217,7 +245,10 @@ fun WifiAnalyzerScreen(viewModel: WifiAnalyzerViewModel) {
             }
         } else {
             // Advanced Tab: Congestion Chart + Lists
-            ResultCard(title = "Channel Utilization Map") {
+            ResultCard(
+                title = "Channel Utilization Map",
+                modifier = Modifier.tvFocusable(isTv)
+            ) {
                 Text(
                     text = "Congestion level per Wi-Fi spectrum channel. Tall columns represent overlapping networks (high interference risk).",
                     fontSize = 11.sp,
@@ -250,6 +281,7 @@ fun WifiAnalyzerScreen(viewModel: WifiAnalyzerViewModel) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(8.dp))
                         .padding(vertical = 4.dp),
                     shape = RoundedCornerShape(8.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)

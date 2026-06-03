@@ -25,10 +25,14 @@ import page.gagerandall.netpulse.ui.theme.ColorExcellent
 import page.gagerandall.netpulse.ui.theme.ColorFailed
 import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
+import page.gagerandall.netpulse.LocalTvMode
+import page.gagerandall.netpulse.util.tvFocusable
+import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
+    val isTv = LocalTvMode.current
     val state by viewModel.state.collectAsState()
 
     var urlInput by remember { mutableStateOf("google.com") }
@@ -59,12 +63,12 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -85,6 +89,7 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
             placeholder = { Text("e.g. google.com") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            readOnly = state.status == "Running",
             trailingIcon = {
                 if (state.status == "Running") {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -101,7 +106,10 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
                 onValueChange = { },
                 readOnly = true,
                 label = { Text("Request Method") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { dropdownExpanded = true }
+                    .tvFocusable(isTv, focusable = false),
                 trailingIcon = {
                     IconButton(onClick = { dropdownExpanded = true }) {
                         Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Expand")
@@ -164,7 +172,9 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
                             Text("${header.key}: ${header.value}", fontSize = 12.sp, modifier = Modifier.weight(1f))
                             IconButton(
                                 onClick = { customHeaders.removeAt(index) },
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .tvFocusable(isTv, RoundedCornerShape(4.dp), focusable = false)
                             ) {
                                 Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                             }
@@ -199,7 +209,9 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
                                     newHeaderValue = ""
                                 }
                             },
-                            modifier = Modifier.background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
+                                .tvFocusable(isTv, RoundedCornerShape(4.dp), focusable = false)
                         ) {
                             Icon(imageVector = Icons.Default.Add, contentDescription = "Add", tint = MaterialTheme.colorScheme.onPrimary)
                         }
@@ -210,22 +222,30 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        Spacer(modifier = Modifier.height(10.dp))
+
+        val isRunning = state.status == "Running"
         Button(
             onClick = {
-                viewModel.inspectUrl(
-                    urlInput = urlInput,
-                    method = selectedMethod,
-                    customHeaders = customHeaders.toList(),
-                    followRedirectsManually = followRedirectsManually
-                )
+                if (!isRunning) {
+                    viewModel.inspectUrl(
+                        urlInput = urlInput,
+                        method = selectedMethod,
+                        customHeaders = customHeaders.toList(),
+                        followRedirectsManually = followRedirectsManually
+                    )
+                }
             },
-            enabled = state.status != "Running",
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary,
+                contentColor = if (isRunning) MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onPrimary
+            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Run")
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Analyze Endpoint Protocol Headers")
+            Text(if (isRunning) "Analyzing Endpoint Headers..." else "Analyze Endpoint Protocol Headers")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -256,7 +276,12 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
                 statusText = "status: ${state.statusCode}",
                 statusColor = statusColor
             ) {
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusable(isTv, RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Response speed", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("${state.responseTimeMs} ms", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge, color = ColorGood)
@@ -281,6 +306,7 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                .tvFocusable(isTv, RoundedCornerShape(4.dp))
                                 .padding(8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -303,6 +329,7 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .tvFocusable(isTv, RoundedCornerShape(12.dp))
                                 .padding(bottom = 16.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
@@ -330,6 +357,7 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel) {
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                            .tvFocusable(isTv, RoundedCornerShape(6.dp))
                             .padding(8.dp),
                         verticalAlignment = Alignment.Top
                     ) {

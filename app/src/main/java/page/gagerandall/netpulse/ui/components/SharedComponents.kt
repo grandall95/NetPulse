@@ -41,6 +41,10 @@ import page.gagerandall.netpulse.ui.theme.ColorFailed
 import page.gagerandall.netpulse.ui.theme.ColorGood
 import page.gagerandall.netpulse.ui.theme.ColorPoor
 
+/**
+ * A standardized card component for displaying diagnostic results.
+ * Includes a title, status indicator, and content area.
+ */
 @Composable
 fun ResultCard(
     modifier: Modifier = Modifier,

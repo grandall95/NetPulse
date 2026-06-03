@@ -8,6 +8,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel for the IP Subnet Calculator.
+ * Calculates network addresses, broadcast addresses, and usable host ranges for IPv4/IPv6.
+ */
 class SubnetCalculatorViewModel : ViewModel() {
 
     data class SubnetState(
@@ -26,6 +30,10 @@ class SubnetCalculatorViewModel : ViewModel() {
         recalculateSubnet("192.168.1.1", 24, 4)
     }
 
+    /**
+     * Triggers a recalculation of subnet details when the IP or CIDR prefix changes.
+     * Also supports splitting a network into smaller allocated sub-blocks.
+     */
     fun recalculateSubnet(ip: String, cidr: Int, splits: Int) {
         viewModelScope.launch(Dispatchers.Default) {
             try {
