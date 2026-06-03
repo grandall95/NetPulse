@@ -1,0 +1,1 @@
+* Fixes an error in AndroidManifest.xml that was causing the app to not be available for Google or Android TV
