@@ -22,6 +22,22 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  flavorDimensions += "device"
+  productFlavors {
+    create("mobile") {
+      dimension = "device"
+      targetSdk = 37
+      versionCode = 500
+    }
+    create("television") {
+      dimension = "device"
+      targetSdk = 35
+      versionCode = 501
+      // For TV, we append a suffix to distinguish it in the Play Console if needed
+      // but usually different versionCodes are enough for Multi-APK.
+    }
+  }
+
   signingConfigs {
     create("release") {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"

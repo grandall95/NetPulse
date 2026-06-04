@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="page.gagerandall.netpulse">
+
+    <!-- Forces the app to remain in Landscape on TV devices, required for some Google TV validation bots -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" tools:node="replace" />
+    <uses-feature android:name="android.hardware.screen.landscape" android:required="true" />
+
+    <!-- Explicitly mark hardware as optional for TV devices -->
+    <uses-feature android:name="android.hardware.location" android:required="false" tools:node="replace"/>
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" tools:node="replace"/>
+    <uses-feature android:name="android.hardware.location.network" android:required="false" tools:node="replace"/>
+    <uses-feature android:name="android.hardware.wifi" android:required="false" tools:node="replace"/>
+    <uses-feature android:name="android.hardware.ethernet" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" tools:node="replace"/>
+
+    <!-- Required for TV to show the app on the home screen banner -->
+    <uses-feature android:name="android.software.leanback" android:required="true" tools:node="replace" />
+
+    <application tools:node="merge">
+        <activity
+            android:name=".MainActivity"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"
+            tools:node="merge" />
+    </application>
+
+</manifest>
