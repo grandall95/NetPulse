@@ -16,8 +16,8 @@ android {
     applicationId = "page.gagerandall.netpulse"
     minSdk = 29
     targetSdk = 37
-    versionCode = 5
-    versionName = "1.0.3-1"
+    versionCode = 6
+    versionName = "1.0.3-2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -132,8 +132,9 @@ dependencies {
   implementation(libs.dnsjava)
   
   // Compose for TV Support
-  implementation(libs.androidx.tv.foundation)
-  implementation(libs.androidx.tv.material)
+  "televisionImplementation"(libs.androidx.leanback)
+  "televisionImplementation"(libs.androidx.tv.foundation)
+  "televisionImplementation"(libs.androidx.tv.material)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
