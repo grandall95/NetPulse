@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="page.gagerandall.netpulse">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Forces the app to remain in Landscape on TV devices, required for some Google TV validation bots -->
     <uses-feature android:name="android.hardware.screen.portrait" android:required="false" tools:node="replace" />
@@ -20,7 +19,7 @@
 
     <application tools:node="merge">
         <activity
-            android:name=".MainActivity"
+            android:name="page.gagerandall.netpulse.MainActivity"
             android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"
             tools:node="merge" />

@@ -164,14 +164,14 @@ fun AppNavigation(
                             selected = isSelected,
                             onClick = onItemClick,
                             modifier = Modifier.focusRequester(focusRequesters[dest] ?: remember { FocusRequester() }),
-                            leadingContent = {
+                            icon = {
                                 Icon(
                                     imageVector = if (isSelected) dest.selectedIcon else dest.unselectedIcon,
                                     contentDescription = dest.title,
                                     tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
-                            content = {
+                            label = {
                                 if (!isClosed) {
                                     Text(
                                         text = dest.title,

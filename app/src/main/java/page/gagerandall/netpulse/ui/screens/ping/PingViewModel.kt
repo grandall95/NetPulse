@@ -68,7 +68,7 @@ class PingViewModel : ViewModel() {
         count: Int = 4,
         size: Int = 56,
         timeoutSec: Int = 2,
-        ttl: Int = 64
+        ttl: Int = 64,
     ) {
         _pingResults.value = PingResults(status = "Running")
         pingJob = viewModelScope.launch(Dispatchers.IO) {
@@ -91,7 +91,7 @@ class PingViewModel : ViewModel() {
                 val fallbackLogs = mutableListOf(
                     "Unprivileged ICMP socket check failed or not permitted by kernel.",
                     "Native Ping binary execution failed/restricted on this device.",
-                    "Initiating HTTP/Java Reachability fallback..."
+                    "Initiating HTTP/Java Reachability fallback...",
                 )
                 runFallbackInet(cleanedHost, count, fallbackLogs)
             }
@@ -106,7 +106,7 @@ class PingViewModel : ViewModel() {
         count: Int,
         size: Int,
         timeoutSec: Int,
-        ttl: Int
+        ttl: Int,
     ): Boolean {
         return withContext(Dispatchers.IO) {
             var socketFd: FileDescriptor? = null
@@ -114,7 +114,7 @@ class PingViewModel : ViewModel() {
                 socketFd = Os.socket(
                     OsConstants.AF_INET,
                     OsConstants.SOCK_DGRAM,
-                    OsConstants.IPPROTO_ICMP
+                    OsConstants.IPPROTO_ICMP,
                 )
 
                 val timeoutValue = StructTimeval.fromMillis((timeoutSec * 1000).toLong())
@@ -147,42 +147,39 @@ class PingViewModel : ViewModel() {
                         responseBuffer.flip()
                         val bytesReceived = responseBuffer.remaining()
                         if (bytesReceived >= 8) {
-                            val replyType = responseBuffer.get(0).toInt() and 0xFF
-                            val replyCode = responseBuffer.get(1).toInt() and 0xFF
+                            val replyType = responseBuffer[0].toInt() and 0xFF
+                            val replyCode = responseBuffer[1].toInt() and 0xFF
                             val replySequence = responseBuffer.getShort(6)
 
-                            if (replyType == 0 && replyCode == 0) {
+                            if ((replyType == 0) && (replyCode == 0)) {
                                 received++
                                 rtts.add(duration)
-                                logs.add("$bytesReceived bytes from ${address.hostAddress}: icmp_seq=$replySequence time=${String.format("%.1f", duration)} ms")
+                                logs.add("$bytesReceived bytes from ${address.hostAddress}: icmp_seq=$replySequence time=${String.format(java.util.Locale.US, "%.1f", duration)} ms")
                             } else {
                                 logs.add("Received non-reply ICMP type=$replyType code=$replyCode from ${address.hostAddress}")
                             }
                         } else {
                             logs.add("Received truncated packet of size $bytesReceived bytes")
                         }
-                    } catch (e: ErrnoException) {
-                        if (e.errno == OsConstants.EAGAIN) {
-                            logs.add("Request timeout for icmp_seq=$i")
-                        } else {
-                            logs.add("Socket error on seq=$i: ${e.message}")
-                        }
-                    } catch (e: Exception) {
-                        logs.add("Error sending/receiving seq=$i: ${e.message}")
+                    } catch (_: ErrnoException) {
+                        logs.add("Socket error on seq=$i")
+                    } catch (_: Exception) {
+                        logs.add("Error sending/receiving seq=$i")
                     }
 
                     if (isActive) {
-                        _pingResults.value = _pingResults.value.copy(
+                        val currentResults = _pingResults.value
+                        _pingResults.value = currentResults.copy(
                             individualRtts = rtts.toList(),
                             packetsSent = sent,
                             packetsReceived = received,
-                            rawLogs = logs.toList()
+                            rawLogs = logs.toList(),
                         )
                     }
 
-                    if (i < count && isActive) {
+                    if ((i < count) && isActive) {
                         var slept = 0
-                        while (slept < 1000 && isActive) {
+                        while ((slept < 1000) && isActive) {
                             Thread.sleep(50)
                             slept += 50
                         }
@@ -207,16 +204,16 @@ class PingViewModel : ViewModel() {
                         packetsSent = sent,
                         packetsReceived = received,
                         individualRtts = rtts,
-                        rawLogs = logs
+                        rawLogs = logs,
                     )
                     return@withContext true
                 }
                 return@withContext false
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 return@withContext false
             } finally {
                 socketFd?.let {
-                    try { Os.close(it) } catch (ignored: Exception) {}
+                    try { Os.close(it) } catch (_: Exception) {}
                 }
             }
         }
@@ -227,7 +224,7 @@ class PingViewModel : ViewModel() {
         count: Int,
         size: Int,
         timeoutSec: Int,
-        ttl: Int
+        ttl: Int,
     ): Boolean {
         return withContext(Dispatchers.IO) {
             try {
@@ -268,7 +265,7 @@ class PingViewModel : ViewModel() {
                                             individualRtts = rtts.toList(),
                                             packetsSent = sent,
                                             packetsReceived = received,
-                                            rawLogs = logs.toList()
+                                            rawLogs = logs.toList(),
                                         )
                                     }
                                 }
@@ -278,7 +275,7 @@ class PingViewModel : ViewModel() {
                             if (isActive) {
                                 _pingResults.value = _pingResults.value.copy(
                                     packetsSent = sent,
-                                    rawLogs = logs.toList()
+                                    rawLogs = logs.toList(),
                                 )
                             }
                         }
@@ -295,7 +292,7 @@ class PingViewModel : ViewModel() {
                     return@withContext false
                 }
 
-                if (rtts.isEmpty() && sent == 0) {
+                if ((rtts.isEmpty()) && (sent == 0)) {
                     return@withContext false
                 }
 
@@ -321,11 +318,11 @@ class PingViewModel : ViewModel() {
                         packetsSent = count,
                         packetsReceived = received,
                         individualRtts = rtts,
-                        rawLogs = logs
+                        rawLogs = logs,
                     )
                 }
                 return@withContext true
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 return@withContext false
             }
         }
@@ -341,19 +338,24 @@ class PingViewModel : ViewModel() {
         buffer.putShort(0x1234.toShort()) // Identifier
         buffer.putShort(sequence.toShort()) // Sequence number
         
-        for (i in 0 until payloadSize) {
+        repeat(payloadSize) {
             buffer.put(0.toByte())
         }
         
         val packet = buffer.array()
         val checksum = calculateChecksum(packet)
         
+        // Populate the checksum field (big-endian)
         packet[2] = ((checksum.toInt() shr 8) and 0xFF).toByte()
         packet[3] = (checksum.toInt() and 0xFF).toByte()
         
         return packet
     }
 
+    /**
+     * Calculates the ICMP checksum for the given byte array.
+     * ICMP checksum is the 16-bit one's complement of the one's complement sum of the ICMP message.
+     */
     private fun calculateChecksum(buf: ByteArray): Short {
         var length = buf.size
         var i = 0
@@ -362,19 +364,23 @@ class PingViewModel : ViewModel() {
         while (length > 1) {
             val first = buf[i].toInt() and 0xFF
             val second = buf[i + 1].toInt() and 0xFF
+            // Combine two bytes into a 16-bit word
             sum += (first shl 8) or second
             i += 2
             length -= 2
         }
+        // Handle odd byte if present
         if (length > 0) {
             val first = buf[i].toInt() and 0xFF
             sum += (first shl 8)
         }
         
+        // Fold carry bits back into the lower 16 bits
         while ((sum shr 16) != 0) {
             sum = (sum and 0xFFFF) + (sum shr 16)
         }
         
+        // Take the one's complement
         return sum.inv().toShort()
     }
 
@@ -410,13 +416,13 @@ class PingViewModel : ViewModel() {
                             packetsReceived = received,
                             rawLogs = startLogs.toList(),
                             status = "Running",
-                            isFallback = true
+                            isFallback = true,
                         )
                     }
                     
                     // Sleep with check
                     var slept = 0
-                    while (slept < 500 && isActive) {
+                    while ((slept < 500) && isActive) {
                         Thread.sleep(50)
                         slept += 50
                     }
@@ -426,7 +432,7 @@ class PingViewModel : ViewModel() {
                     val min = if (rtts.isEmpty()) 0f else rtts.minOrNull() ?: 0f
                     val max = if (rtts.isEmpty()) 0f else rtts.maxOrNull() ?: 0f
                     val avg = if (rtts.isEmpty()) 0f else rtts.average().toFloat()
-                    val loss = ((count - received).toFloat() / count * 100)
+                    val loss = (((count - received).toFloat() / count) * 100)
 
                     _pingResults.value = PingResults(
                         minRtt = min,
@@ -438,7 +444,7 @@ class PingViewModel : ViewModel() {
                         packetsSent = count,
                         packetsReceived = received,
                         individualRtts = rtts,
-                        rawLogs = startLogs
+                        rawLogs = startLogs,
                     )
                 }
             } catch (e: Exception) {
@@ -447,7 +453,7 @@ class PingViewModel : ViewModel() {
                     _pingResults.value = PingResults(
                         status = "Failed",
                         isFallback = true,
-                        rawLogs = startLogs
+                        rawLogs = startLogs,
                     )
                 }
             }

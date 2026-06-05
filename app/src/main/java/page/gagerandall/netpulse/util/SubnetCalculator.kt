@@ -24,6 +24,10 @@ object SubnetCalculator {
 
     /**
      * Determines whether to use IPv4 or IPv6 calculation logic based on the input string.
+     * 
+     * @param ipInput The IP address string (e.g., "192.168.1.1" or "2001:db8::1").
+     * @param prefixLength The CIDR prefix length (e.g., 24 for /24).
+     * @return SubnetDetails object containing calculated network properties.
      */
     fun calculate(ipInput: String, prefixLength: Int): SubnetDetails {
         val addressStr = ipInput.trim()
@@ -96,6 +100,11 @@ object SubnetCalculator {
 
     /**
      * Divides an IPv4 network into smaller sub-blocks based on the requested count.
+     * 
+     * @param ip The base network IP address.
+     * @param cidr The base network CIDR prefix length.
+     * @param subnetsCount The number of subnets to create.
+     * @return A list of Pairs containing the new subnet IP and CIDR prefix.
      */
     fun splitSubnetIpv4(ip: String, cidr: Int, subnetsCount: Int): List<Pair<String, Int>> {
         val ipv4Int = ipToLong(ip)

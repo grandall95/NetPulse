@@ -15,7 +15,7 @@ class DnsLookupViewModel : ViewModel() {
     data class DnsRecordResult(
         val value: String,
         val ttl: Long = 0,
-        val type: String = "A"
+        val type: String = "A",
     )
 
     data class DnsQueryState(
@@ -63,7 +63,7 @@ class DnsLookupViewModel : ViewModel() {
                     // Simple path: resolve via system InetAddress or default Lookup
                     val records = mutableListOf<DnsRecordResult>()
                     
-                    if (typeInt == Type.A || typeInt == Type.AAAA) {
+                    if ((typeInt == Type.A) || (typeInt == Type.AAAA)) {
                         val addresses = InetAddress.getAllByName(cleanedDomain)
                         addresses.forEach { addr ->
                             val currentType = if (addr.hostAddress?.contains(":") == true) "AAAA" else "A"

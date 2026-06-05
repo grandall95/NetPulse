@@ -44,6 +44,13 @@ import page.gagerandall.netpulse.ui.theme.ColorPoor
 /**
  * A standardized card component for displaying diagnostic results.
  * Includes a title, status indicator, and content area.
+ * 
+ * @param title The title displayed at the top of the card.
+ * @param statusText Optional status text displayed in a pill badge.
+ * @param statusColor Optional color for the status badge background and text.
+ * @param containerColor Background color for the card.
+ * @param borderColor Color for the card's border.
+ * @param content The composable content to be displayed within the card.
  */
 @Composable
 fun ResultCard(
@@ -112,6 +119,13 @@ fun ResultCard(
 private fun BorderStroke(width: androidx.compose.ui.unit.Dp, color: Color) = 
     androidx.compose.foundation.BorderStroke(width, color)
 
+/**
+ * A custom chart component for visualizing latency data points over time.
+ * Displays min, avg, max statistics and color-coded threshold guidelines.
+ * 
+ * @param dataPoints List of latency values in milliseconds.
+ * @param enableZoom Whether to allow pinch-to-zoom and panning on the chart.
+ */
 @Composable
 fun LatencyChart(
     dataPoints: List<Float>,
@@ -267,6 +281,14 @@ fun LatencyChart(
     }
 }
 
+/**
+ * A dialog explaining why a specific permission is required.
+ * 
+ * @param permissionLabel The name of the permission (e.g., "Location").
+ * @param rationaleText A detailed explanation of why the permission is needed.
+ * @param onDismiss Callback when the user cancels or dismisses the dialog.
+ * @param onConfirm Callback when the user agrees to grant the permission.
+ */
 @Composable
 fun PermissionRationaleDialog(
     permissionLabel: String,

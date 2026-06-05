@@ -3,6 +3,8 @@ package page.gagerandall.netpulse.ui.screens.wifi
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.wifi.ScanResult
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
@@ -43,7 +45,7 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
         val nearbyNetworks: List<WifiNetwork> = emptyList(),
         val isAutoRefresh: Boolean = false,
         val permissionGranted: Boolean = false,
-        val status: String = "Idle"
+        val status: String = "Idle",
     )
 
     private val _state = MutableStateFlow(WifiState())
@@ -67,8 +69,8 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
      */
     fun toggleAutoRefresh(enabled: Boolean) {
         _state.value = _state.value.copy(isAutoRefresh = enabled)
-        if (enabled) {
-            autoRefreshJob = viewModelScope.launch {
+        autoRefreshJob = if (enabled) {
+            viewModelScope.launch {
                 while (state.value.isAutoRefresh) {
                     refreshScanner()
                     delay(5000.milliseconds)
@@ -76,7 +78,7 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
             }
         } else {
             autoRefreshJob?.cancel()
-            autoRefreshJob = null
+            null
         }
     }
 
@@ -91,27 +93,34 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
     @SuppressLint("MissingPermission")
     private fun loadCurrentConnection() {
         try {
+            val connectivityManager = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+
             val connectionInfo: WifiInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // For modern SDK levels, get values from connectivity observers or standard safe info
-                wifiManager?.connectionInfo
+                val network = connectivityManager?.activeNetwork
+                val capabilities = connectivityManager?.getNetworkCapabilities(network)
+                if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
+                    capabilities.transportInfo as? WifiInfo
+                } else null
             } else {
                 @Suppress("DEPRECATION")
                 wifiManager?.connectionInfo
             }
 
-            if (connectionInfo != null && connectionInfo.networkId != -1) {
+            if (connectionInfo != null && ((connectionInfo.networkId != -1))) {
                 val ssid = connectionInfo.ssid?.replace("\"", "") ?: "HomeRouter_5G"
                 val rssi = connectionInfo.rssi
                 val freq = connectionInfo.frequency
                 val channel = convertFrequencyToChannel(freq)
+                val linkSpeed = connectionInfo.linkSpeed
+
                 _state.value = _state.value.copy(
                     currentSsid = if (ssid == "<unknown ssid>") "HQ_Staff_Wi-Fi" else ssid,
                     currentBssid = connectionInfo.bssid ?: "bc:0f:2b:81:4e:12",
                     currentRssi = rssi,
                     currentFrequencyMhz = freq,
                     currentChannel = channel,
-                    currentLinkSpeedMbps = connectionInfo.linkSpeed,
-                    status = "Ready"
+                    currentLinkSpeedMbps = linkSpeed,
+                    status = "Ready",
                 )
             } else {
                 // Fallback baseline for emulation tests
@@ -122,7 +131,7 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
                     currentFrequencyMhz = 5180,
                     currentChannel = 36,
                     currentLinkSpeedMbps = 1200,
-                    status = "Ready"
+                    status = "Ready",
                 )
             }
         } catch (e: Exception) {
@@ -144,12 +153,13 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
                             signalDbm = scan.level,
                             frequencyMhz = scan.frequency,
                             channel = convertFrequencyToChannel(scan.frequency),
-                            securityType = scan.capabilities ?: "WPA2"
-                        )
+                            securityType = scan.capabilities ?: "WPA2",
+                        ),
                     )
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
 
         // If actual scanning list is empty because of emulator limitation or location permissions,
         // populate high-fidelity simulation entries to show congested channels nicely.
@@ -162,13 +172,13 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
                     WifiNetwork("XFINITY_Wi-Fi", "00:a1:b2:c3:d4:e5", -72, 2437, 6, "Open / Captive"),
                     WifiNetwork("SmartHome_Hub", "bb:bb:bb:cc:cc:cc", -55, 2462, 11, "WPA2-PSK"),
                     WifiNetwork("Neighbor_Router_5G", "00:11:22:33:44:55", -78, 5240, 48, "WPA3 Personal"),
-                    WifiNetwork("Backbone-Backup", "fa:eb:dc:bd:ae:98", -88, 5745, 149, "WPA2 Personal")
-                )
+                    WifiNetwork("Backbone-Backup", "fa:eb:dc:bd:ae:98", -88, 5745, 149, "WPA2 Personal"),
+                ),
             )
         }
 
         _state.value = _state.value.copy(
-            nearbyNetworks = list.sortedByDescending { it.signalDbm }
+            nearbyNetworks = list.sortedByDescending { it.signalDbm },
         )
     }
 
@@ -185,10 +195,10 @@ class WifiAnalyzerViewModel(application: Application) : AndroidViewModel(applica
      * Maps Wi-Fi frequency (MHz) to its corresponding 2.4GHz or 5GHz channel number.
      */
     private fun convertFrequencyToChannel(freqMhz: Int): Int {
-        return when {
-            freqMhz == 2484 -> 14
-            freqMhz in 2412..2472 -> (freqMhz - 2407) / 5
-            freqMhz in 5170..5900 -> (freqMhz - 5000) / 5
+        return when (freqMhz) {
+            2484 -> 14
+            in 2412..2472 -> (freqMhz - 2407) / 5
+            in 5170..5900 -> (freqMhz - 5000) / 5
             else -> 1
         }
     }

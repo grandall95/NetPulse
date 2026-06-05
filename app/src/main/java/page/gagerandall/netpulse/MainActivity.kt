@@ -15,9 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import page.gagerandall.netpulse.core.SettingsStore
 import page.gagerandall.netpulse.ui.navigation.AppNavigation
-import page.gagerandall.netpulse.ui.screens.dns.DnsLookupViewModel
-import page.gagerandall.netpulse.ui.screens.header.HttpHeaderViewModel
-import page.gagerandall.netpulse.ui.screens.ipinfo.IpInfoViewModel
 import page.gagerandall.netpulse.ui.screens.latency.LatencyGraphViewModel
 import page.gagerandall.netpulse.ui.screens.ping.PingViewModel
 import page.gagerandall.netpulse.ui.screens.portscan.PortScannerViewModel
@@ -68,6 +65,7 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(LocalTvMode provides isTv) {
                 MyApplicationTheme(darkTheme = useDarkTheme) {
                     val config = LocalConfiguration.current
+                    // Determine if the screen is large enough for a side navigation panel (>= 600dp)
                     val isLargeScreen = config.screenWidthDp >= 600
 
                     Scaffold(
@@ -77,7 +75,7 @@ class MainActivity : ComponentActivity() {
                             // Main navigation host
                             AppNavigation(
                                 settingsViewModel = settingsViewModel,
-                                isLargeScreen = isLargeScreen
+                                isLargeScreen = isLargeScreen,
                             )
                         }
                     }

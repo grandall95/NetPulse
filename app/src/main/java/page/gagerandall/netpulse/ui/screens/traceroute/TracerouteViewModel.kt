@@ -21,7 +21,7 @@ class TracerouteViewModel : ViewModel() {
         val hopNumber: Int,
         val hostname: String,
         val ipAddress: String,
-        val rttMs: Float
+        val rttMs: Float,
     )
 
     data class TracerouteResults(
@@ -30,7 +30,7 @@ class TracerouteViewModel : ViewModel() {
         val rawOutput: List<String> = emptyList(),
         val maxHops: Int = 30,
         val isFallback: Boolean = false,
-        val routeComplete: Boolean = false
+        val routeComplete: Boolean = false,
     )
 
     private val _results = MutableStateFlow(TracerouteResults())
@@ -44,7 +44,7 @@ class TracerouteViewModel : ViewModel() {
         tracerouteJob = null
         try {
             activeProcess?.destroy()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // ignore
         }
         activeProcess = null
@@ -87,8 +87,8 @@ class TracerouteViewModel : ViewModel() {
                         
                         // Simple parse of traceroute stdout line
                         val parsedHop = parseNativeRouteLine(l)
-                        if (parsedHop != null) {
-                            hopsList.add(parsedHop)
+                        parsedHop?.let {
+                            hopsList.add(it)
                         }
 
                         if (isActive) {
@@ -117,7 +117,7 @@ class TracerouteViewModel : ViewModel() {
                     return@launch
                 }
 
-                val targetReached = hopsList.any { it.ipAddress == cleanedHost || it.hostname == cleanedHost }
+                val targetReached = hopsList.any { (it.ipAddress == cleanedHost) || (it.hostname == cleanedHost) }
                 if (isActive) {
                     _results.value = _results.value.copy(
                         status = "Complete",
@@ -202,8 +202,8 @@ class TracerouteViewModel : ViewModel() {
                         }
                     }
                     process.waitFor()
-                } catch (e: Exception) {
-                    logs.add("TTL $ttl: Process error: ${e.message}")
+                } catch (_: Exception) {
+                    logs.add("TTL $ttl: Process error")
                 } finally {
                     process?.destroy()
                     activeProcess = null
@@ -248,7 +248,7 @@ class TracerouteViewModel : ViewModel() {
                     )
                 }
 
-                if (isReached || hopIp == targetIp) {
+                if ((isReached) || (hopIp == targetIp)) {
                     reachedDestination = true
                     break
                 }
@@ -322,7 +322,7 @@ class TracerouteViewModel : ViewModel() {
                 )
 
                 hopsList.add(nextHop)
-                logs.add(" $hopIdx  $name ($ip)  ${String.format("%.3f", rtt)} ms")
+                logs.add(" $hopIdx  $name ($ip)  ${String.format(Locale.US, "%.3f", rtt)} ms")
 
                 if (isActive) {
                     _results.value = TracerouteResults(
@@ -365,7 +365,7 @@ class TracerouteViewModel : ViewModel() {
         // Search parts for ms
         var msVal = 10f
         for (i in 2 until parts.size) {
-            if (parts[i] == "ms" && i > 0) {
+            if ((parts[i] == "ms") && (i > 0)) {
                 msVal = parts[i - 1].toFloatOrNull() ?: 10f
                 break
             }
