@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -27,12 +28,12 @@ android {
     create("mobile") {
       dimension = "device"
       targetSdk = 37
-      versionCode = (defaultConfig.versionCode ?: 1) * 100
+      versionCode = defaultConfig.versionCode
     }
     create("television") {
       dimension = "device"
       targetSdk = 35
-      versionCode = (defaultConfig.versionCode ?: 1) * 100 + 1
+      versionCode = (defaultConfig.versionCode ?: 1) + 10000
       // For TV, we append a suffix to distinguish it in the Play Console if needed
       // but usually different versionCodes are enough for Multi-APK.
     }
@@ -80,6 +81,42 @@ android {
     buildConfig = true
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
+}
+
+androidComponents {
+  onVariants(selector().all()) { variant ->
+    val variantName = variant.name
+    val version = variant.outputs.firstOrNull()?.versionName?.orNull ?: "1.0.0"
+    val code = variant.outputs.firstOrNull()?.versionCode?.orNull ?: 1
+
+    // 1. Rename output APK
+    variant.outputs.forEach { output ->
+      val outputImpl = output as? com.android.build.api.variant.impl.VariantOutputImpl
+      if (outputImpl != null) {
+        outputImpl.outputFileName.set("NetPulse-${variantName}-v${version}(${code}).apk")
+      }
+    }
+
+    // 2. Rename output AAB (App Bundle) via post-build copy task
+    val bundleTaskName = "bundle${variantName.replaceFirstChar { it.uppercase() }}"
+    val copyTaskName = "copy${variantName.replaceFirstChar { it.uppercase() }}Bundle"
+    tasks.register<Copy>(copyTaskName) {
+      from(layout.buildDirectory.dir("outputs/bundle/${variantName}"))
+      include("*.aab")
+      into(layout.buildDirectory.dir("outputs/renamed-bundle/${variantName}"))
+      duplicatesStrategy = DuplicatesStrategy.INCLUDE
+      rename { fileName ->
+        if (fileName.contains("unsigned") || fileName.startsWith("app-")) {
+          "NetPulse-${variantName}-v${version}(${code}).aab"
+        } else {
+          null
+        }
+      }
+    }
+    tasks.matching { it.name == bundleTaskName }.configureEach {
+      finalizedBy(copyTaskName)
+    }
+  }
 }
 
 kotlin {
