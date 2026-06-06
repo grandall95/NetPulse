@@ -5,15 +5,15 @@
     "kind": "Directory"
   },
   "applicationId": "page.gagerandall.netpulse",
-  "variantName": "mobileRelease",
+  "variantName": "televisionRelease",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 500,
+      "versionCode": 501,
       "versionName": "1.0.4",
-      "outputFile": "app-mobile-release.apk"
+      "outputFile": "app-television-release.apk"
     }
   ],
   "elementType": "File",
@@ -22,14 +22,14 @@
       "minApi": 28,
       "maxApi": 30,
       "baselineProfiles": [
-        "baselineProfiles/1/app-mobile-release.dm"
+        "baselineProfiles/1/app-television-release.dm"
       ]
     },
     {
       "minApi": 31,
       "maxApi": 2147483647,
       "baselineProfiles": [
-        "baselineProfiles/0/app-mobile-release.dm"
+        "baselineProfiles/0/app-television-release.dm"
       ]
     }
   ],

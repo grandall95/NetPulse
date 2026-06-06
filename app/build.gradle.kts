@@ -16,8 +16,8 @@ android {
     applicationId = "page.gagerandall.netpulse"
     minSdk = 29
     targetSdk = 37
-    versionCode = 6
-    versionName = "1.0.4"
+    versionCode = 7
+    versionName = "1.0.5"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -27,12 +27,12 @@ android {
     create("mobile") {
       dimension = "device"
       targetSdk = 37
-      versionCode = 500
+      versionCode = (defaultConfig.versionCode ?: 1) * 100
     }
     create("television") {
       dimension = "device"
       targetSdk = 35
-      versionCode = 501
+      versionCode = (defaultConfig.versionCode ?: 1) * 100 + 1
       // For TV, we append a suffix to distinguish it in the Play Console if needed
       // but usually different versionCodes are enough for Multi-APK.
     }

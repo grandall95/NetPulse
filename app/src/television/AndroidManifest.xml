@@ -4,7 +4,7 @@
 
     <!-- Forces the app to remain in Landscape on TV devices, required for some Google TV validation bots -->
     <uses-feature android:name="android.hardware.screen.portrait" android:required="false" tools:node="replace" />
-    <uses-feature android:name="android.hardware.screen.landscape" android:required="true" />
+    <uses-feature android:name="android.hardware.screen.landscape" android:required="false" tools:node="replace" />
 
     <!-- Explicitly mark hardware as optional for TV devices -->
     <uses-feature android:name="android.hardware.location" android:required="false" tools:node="replace"/>
