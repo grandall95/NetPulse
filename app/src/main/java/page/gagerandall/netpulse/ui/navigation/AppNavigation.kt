@@ -126,62 +126,69 @@ fun AppNavigation(
             drawerState = drawerState,
             drawerContent = { drawerValue ->
                 val isClosed = drawerValue == DrawerValue.Closed
-                LazyColumn(
-                    state = lazyListState,
+                val drawerWidth = if (isClosed) 80.dp else 240.dp
+                Box(
                     modifier = Modifier
                         .fillMaxHeight()
+                        .width(drawerWidth)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = androidx.compose.ui.Alignment.Start
                 ) {
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = if (isClosed) "NP" else "NetPulse TV",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(start = 12.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                    itemsIndexed(NavigationRoutes.entries.toTypedArray()) { _, dest ->
-                        val isSelected = currentRoute == dest.route
-                        val onItemClick = remember(dest.route) {
-                            {
-                                if (currentRoute != dest.route) {
-                                    navController.navigate(dest.route) {
-                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = androidx.compose.ui.Alignment.Start
+                    ) {
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = if (isClosed) "NP" else "NetPulse TV",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(start = 12.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        itemsIndexed(NavigationRoutes.entries.toTypedArray()) { _, dest ->
+                            val isSelected = currentRoute == dest.route
+                            val onItemClick = remember(dest.route) {
+                                {
+                                    if (currentRoute != dest.route) {
+                                        navController.navigate(dest.route) {
+                                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
                                     }
                                 }
                             }
-                        }
-                        
-                        NavigationDrawerItem(
-                            selected = isSelected,
-                            onClick = onItemClick,
-                            modifier = Modifier.focusRequester(focusRequesters[dest] ?: remember { FocusRequester() }),
-                            icon = {
-                                Icon(
-                                    imageVector = if (isSelected) dest.selectedIcon else dest.unselectedIcon,
-                                    contentDescription = dest.title,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            label = {
-                                if (!isClosed) {
-                                    Text(
-                                        text = dest.title,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                            
+                            NavigationDrawerItem(
+                                selected = isSelected,
+                                onClick = onItemClick,
+                                modifier = Modifier.focusRequester(focusRequesters[dest] ?: remember { FocusRequester() }),
+                                icon = {
+                                    Icon(
+                                        imageVector = if (isSelected) dest.selectedIcon else dest.unselectedIcon,
+                                        contentDescription = dest.title,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                },
+                                label = {
+                                    if (!isClosed) {
+                                        Text(
+                                            text = dest.title,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
